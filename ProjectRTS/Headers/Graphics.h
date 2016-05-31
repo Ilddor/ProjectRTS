@@ -1,18 +1,14 @@
 #pragma once
 
 #include <windows.h>
+#include <memory>
 
 #include "D3D.h"
 
 class GraphicsClass
 {
 public:
-	GraphicsClass();
-	GraphicsClass(const GraphicsClass&);
-	~GraphicsClass();
-
-	bool Initialize(int, int, HWND);
-	void Shutdown();
+	GraphicsClass(int screenHeight, int screenWidth, HWND hwnd);
 	bool Frame();
 
     static const bool FULL_SCREEN = false;
@@ -23,5 +19,5 @@ public:
 private:
 	bool Render();
 
-    D3DClass* m_Direct3D;
+    std::unique_ptr<D3DClass> m_direct3D;
 };

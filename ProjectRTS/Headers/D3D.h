@@ -31,9 +31,9 @@ public:
 
 	D3DClass();
 	D3DClass(const D3DClass&);
+    D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, bool fullscreen);
 	~D3DClass();
 
-	bool Initialize(int, int, HWND, bool, bool);
 	void Shutdown();
 
 	bool Render();

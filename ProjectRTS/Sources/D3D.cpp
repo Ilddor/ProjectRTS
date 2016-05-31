@@ -33,7 +33,7 @@ D3DClass::~D3DClass()
 {
 }
 
-bool D3DClass::Initialize(int screenHeight, int screenWidth, HWND hwnd, bool vsync, bool fullscreen)
+D3DClass::D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, bool fullscreen)
 {
 	D3D_FEATURE_LEVEL featureLevel;
 	HRESULT result;
@@ -63,7 +63,6 @@ bool D3DClass::Initialize(int screenHeight, int screenWidth, HWND hwnd, bool vsy
 	if (FAILED(result))
 	{
 		MessageBox(hwnd, L"Could not create a DirectX 12.1 device.  The default video card does not support DirectX 12.1.", L"DirectX Device Failure", MB_OK);
-		return false;
 	}
 
 	// Initialize the description of the command queue.
@@ -352,8 +351,6 @@ bool D3DClass::Initialize(int screenHeight, int screenWidth, HWND hwnd, bool vsy
         m_fence->SetEventOnCompletion(fenceToWaitFor, m_fenceEvent);
         WaitForSingleObject(m_fenceEvent, INFINITE);
     }
-
-	return true;
 }
 
 void D3DClass::Shutdown()

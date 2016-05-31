@@ -1,69 +1,23 @@
 #include "SystemPlayground.h"
 
-SystemClass::SystemClass()
+SystemClass::SystemClass() :
+    m_input(new InputClass)
 {
-	m_Input = nullptr;
-	m_Graphics = nullptr;
-}
+    int screenHeight, screenWidth;
 
-SystemClass::SystemClass(const SystemClass& other)
-{
-}
+    // Initialize the width and height of the screen to zero before sending the variables into the function.
+    screenHeight = 0;
+    screenWidth = 0;
 
+    // Initialize the windows api.
+    InitializeWindows(screenHeight, screenWidth);
 
-SystemClass::~SystemClass()
-{
-}
-
-bool SystemClass::Initialize()
-{
-	int screenHeight, screenWidth;
-	bool result;
-
-
-	// Initialize the width and height of the screen to zero before sending the variables into the function.
-	screenHeight = 0;
-	screenWidth = 0;
-
-	// Initialize the windows api.
-	InitializeWindows(screenHeight, screenWidth);
-
-	// Create the input object.  This object will be used to handle reading the keyboard input from the user.
-	m_Input = new InputClass;
-	if (!m_Input)
-	{
-		return false;
-	}
-
-	// Initialize the input object.
-	m_Input->Initialize();
-
-	// Create the graphics object.  This object will handle rendering all the graphics for this application.
-	m_Graphics = new GraphicsClass;
-
-	// Initialize the graphics object.
-	result = m_Graphics->Initialize(screenHeight, screenWidth, m_hwnd);
-
-	return result;
+    // Create the graphics object.  This object will handle rendering all the graphics for this application.
+    m_graphics = std::unique_ptr<GraphicsClass> (new GraphicsClass(screenHeight, screenWidth, m_hwnd));
 }
 
 void SystemClass::Shutdown()
 {
-	// Release the graphics object.
-	if (m_Graphics)
-	{
-		m_Graphics->Shutdown();
-		delete m_Graphics;
-		m_Graphics = nullptr;
-	}
-
-	// Release the input object.
-	if (m_Input)
-	{
-		delete m_Input;
-		m_Input = nullptr;
-	}
-
 	// Shutdown the window.
 	ShutdownWindows();
 }
@@ -96,7 +50,7 @@ void SystemClass::Run()
 		else
 		{
 			// Otherwise do the frame processing.
-			result = Frame();
+			result = RenderFrame();
 			if (!result)
 			{
 				done = true;
@@ -106,19 +60,19 @@ void SystemClass::Run()
 	}
 }
 
-bool SystemClass::Frame()
+bool SystemClass::RenderFrame()
 {
 	bool result;
 
 
 	// Check if the user pressed escape and wants to exit the application.
-	if (m_Input->IsKeyDown(VK_ESCAPE))
+	if (m_input->IsKeyDown(VK_ESCAPE))
 	{
 		return false;
 	}
 
 	// Do the frame processing for the graphics object.
-	result = m_Graphics->Frame();
+	result = m_graphics->Frame();
 
 	return result;
 }
@@ -130,13 +84,13 @@ LRESULT CALLBACK SystemClass::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam
 		// Check if a key has been pressed on the keyboard.
 	case WM_KEYDOWN:
 		// If a key is pressed send it to the input object so it can record that state.
-		m_Input->KeyDown((unsigned int)wparam);
+		m_input->KeyDown((unsigned int)wparam);
         break;
 
 	// Check if a key has been released on the keyboard.
 	case WM_KEYUP:
 		// If a key is released then send it to the input object so it can unset the state for that key.
-		m_Input->KeyUp((unsigned int)wparam);
+		m_input->KeyUp((unsigned int)wparam);
         break;
 
 	// Any other messages send to the default message handler as our application won't make use of them.
@@ -161,7 +115,7 @@ void SystemClass::InitializeWindows(int& screenHeight, int& screenWidth)
 	m_hinstance = GetModuleHandle(NULL);
 
 	// Give the application a name.
-	m_applicationName = L"Engine";
+	m_applicationName = L"Project RTS";
 
 	// Setup the windows class with default settings.
 	wc.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
@@ -185,7 +139,7 @@ void SystemClass::InitializeWindows(int& screenHeight, int& screenWidth)
 	screenWidth = GetSystemMetrics(SM_CXSCREEN);
 
 	// Setup the screen settings depending on whether it is running in full screen or in windowed mode.
-	if (m_Graphics->FULL_SCREEN)
+	if (m_graphics->FULL_SCREEN)
 	{
 		// If full screen set the screen to maximum size of the users desktop and 32bit.
 		memset(&dmScreenSettings, 0, sizeof(dmScreenSettings));
@@ -232,7 +186,7 @@ void SystemClass::ShutdownWindows()
 	ShowCursor(true);
 
 	// Fix the display settings if leaving full screen mode.
-	if (m_Graphics->FULL_SCREEN)
+	if (m_graphics->FULL_SCREEN)
 	{
 		ChangeDisplaySettings(NULL, 0);
 	}
