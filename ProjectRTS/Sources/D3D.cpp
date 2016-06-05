@@ -256,36 +256,11 @@ D3DClass::D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, boo
 
     //Create pipeline state, load and compile shaders.
 
-    D3DReadFileToBlob(L"DefaultVS.cso", &m_vertexShader);
-    D3DReadFileToBlob(L"DefaultHS.cso", &m_hullShader);
-    D3DReadFileToBlob(L"DefaultDS.cso", &m_domainShader);
-    D3DReadFileToBlob(L"DefaultPS.cso", &m_pixelShader);
-
     std::array<D3D12_INPUT_ELEMENT_DESC, 2> inputElementDescs = 
     {
         D3D12_INPUT_ELEMENT_DESC{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
         D3D12_INPUT_ELEMENT_DESC{ "COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
     };
-
-    /*D3D12_GRAPHICS_PIPELINE_STATE_DESC pipelineDesc = {};
-    pipelineDesc.InputLayout = { inputElementDescs.data() , (UINT)inputElementDescs.size() };
-    pipelineDesc.pRootSignature = m_pRootSignature.get();
-    pipelineDesc.VS = { m_vertexShader->GetBufferPointer(), m_vertexShader->GetBufferSize() };
-    pipelineDesc.PS = { m_pixelShader->GetBufferPointer(), m_pixelShader->GetBufferSize() };
-    pipelineDesc.HS = { m_hullShader->GetBufferPointer(), m_hullShader->GetBufferSize() };
-    pipelineDesc.DS = { m_domainShader->GetBufferPointer(), m_domainShader->GetBufferSize() };
-    pipelineDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT_WIREFRAME);
-    pipelineDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-    pipelineDesc.DepthStencilState.DepthEnable = false;
-    pipelineDesc.DepthStencilState.StencilEnable = false;
-    pipelineDesc.SampleMask = UINT_MAX;
-    pipelineDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
-    pipelineDesc.NumRenderTargets = 1;
-    pipelineDesc.RTVFormats[0] = DXGI_FORMAT_B8G8R8A8_UNORM;
-    pipelineDesc.SampleDesc.Count = 1;
-    ID3D12PipelineState* state = nullptr;
-    m_pDevice->CreateGraphicsPipelineState(&pipelineDesc, IID_PPV_ARGS(&state));
-    m_pPipeline = state;*/
 
     m_pPipeline = std::shared_ptr<Pipeline>(new Pipeline());
     m_pPipeline->setInputLayout({ inputElementDescs.data() , (UINT)inputElementDescs.size() });
