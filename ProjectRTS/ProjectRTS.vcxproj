@@ -153,6 +153,7 @@
     <ClInclude Include="Headers\d3dx12.h" />
     <ClInclude Include="Headers\Graphics.h" />
     <ClInclude Include="Headers\Input.h" />
+    <ClInclude Include="Headers\Pipeline.h" />
     <ClInclude Include="Headers\SystemPlayground.h" />
   </ItemGroup>
   <ItemGroup>
@@ -160,6 +161,7 @@
     <ClCompile Include="Sources\Graphics.cpp" />
     <ClCompile Include="Sources\Input.cpp" />
     <ClCompile Include="Sources\main.cpp" />
+    <ClCompile Include="Sources\Pipeline.cpp" />
     <ClCompile Include="Sources\SystemPlayground.cpp" />
   </ItemGroup>
   <ItemGroup>

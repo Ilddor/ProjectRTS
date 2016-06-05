@@ -8,6 +8,8 @@
 #include <dxgi1_4.h>
 #include <memory>
 
+#include "Pipeline.h"
+
 class D3DClass
 {
 public:
@@ -39,10 +41,12 @@ public:
 
 	bool render();
 
+    std::shared_ptr<ID3D12Device> getDevice();
+
 private:
 
 	bool m_vsync_enabled;
-	ID3D12Device* m_device;
+	std::shared_ptr<ID3D12Device> m_pDevice;
 	ID3D12CommandQueue* m_commandQueue;
 	char m_videoCardDescription[128];
 	IDXGISwapChain3* m_swapChain;
@@ -52,7 +56,8 @@ private:
 	unsigned int m_videoCardMemory;
 	ID3D12CommandAllocator* m_commandAllocator;
 	ID3D12GraphicsCommandList* m_commandList;
-	ID3D12PipelineState* m_pipelineState;
+	//ID3D12PipelineState* m_pPipeline;
+    std::shared_ptr<Pipeline> m_pPipeline;
 	ID3D12Fence* m_fence;
 	HANDLE m_fenceEvent;
 	unsigned long long m_fenceValue;
@@ -60,7 +65,7 @@ private:
     ID3DBlob* m_pixelShader;
     ID3DBlob* m_hullShader;
     ID3DBlob* m_domainShader;
-    ID3D12RootSignature* m_rootSignature;
+    std::shared_ptr<ID3D12RootSignature> m_pRootSignature;
     std::shared_ptr<ID3D12Resource>  m_vertexBuffer;
     D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
     D3D12_VIEWPORT m_viewport;

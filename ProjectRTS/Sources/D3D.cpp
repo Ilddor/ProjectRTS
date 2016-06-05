@@ -7,7 +7,7 @@
 
 D3DClass::D3DClass()
 {
-	m_device = nullptr;
+    m_pDevice = nullptr;
 	m_commandQueue = nullptr;
 	m_swapChain = nullptr;
 	m_renderTargetViewHeap = nullptr;
@@ -15,12 +15,12 @@ D3DClass::D3DClass()
 	m_backBufferRenderTarget[1] = nullptr;
 	m_commandAllocator = nullptr;
 	m_commandList = nullptr;
-	m_pipelineState = nullptr;
+	//m_pipelineState = nullptr;
 	m_fence = nullptr;
 	m_fenceEvent = nullptr;
     m_vertexShader = nullptr;
     m_pixelShader = nullptr;
-    m_rootSignature = nullptr;
+    m_pRootSignature = nullptr;
 }
 
 D3DClass::D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, bool fullscreen)
@@ -49,7 +49,9 @@ D3DClass::D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, boo
 	featureLevel = D3D_FEATURE_LEVEL_11_0;
 
 	// Create the Direct3D 12 device.
-	result = D3D12CreateDevice(NULL, featureLevel, __uuidof(ID3D12Device), (void**)&m_device);
+    ID3D12Device* device;
+	result = D3D12CreateDevice(NULL, featureLevel, __uuidof(ID3D12Device), (void**)&device);
+    m_pDevice = std::shared_ptr<ID3D12Device>(device);
 	if (FAILED(result))
 	{
 		MessageBox(hwnd, L"Could not create a DirectX 12.1 device.  The default video card does not support DirectX 12.1.", L"DirectX Device Failure", MB_OK);
@@ -65,7 +67,7 @@ D3DClass::D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, boo
 	commandQueueDesc.NodeMask = 0;
 
 	// Create the command queue.
-	m_device->CreateCommandQueue(&commandQueueDesc, __uuidof(ID3D12CommandQueue), (void**)&m_commandQueue);
+    m_pDevice->CreateCommandQueue(&commandQueueDesc, __uuidof(ID3D12CommandQueue), (void**)&m_commandQueue);
 
 	// Create a DirectX graphics interface factory.
 	CreateDXGIFactory1(__uuidof(IDXGIFactory4), (void**)&factory);
@@ -192,19 +194,19 @@ D3DClass::D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, boo
 	renderTargetViewHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 
 	// Create the render target view heap for the back buffers.
-	m_device->CreateDescriptorHeap(&renderTargetViewHeapDesc, __uuidof(ID3D12DescriptorHeap), (void**)&m_renderTargetViewHeap);
+    m_pDevice->CreateDescriptorHeap(&renderTargetViewHeapDesc, __uuidof(ID3D12DescriptorHeap), (void**)&m_renderTargetViewHeap);
 
 	// Get a handle to the starting memory location in the render target view heap to identify where the render target views will be located for the two back buffers.
 	renderTargetViewHandle = m_renderTargetViewHeap->GetCPUDescriptorHandleForHeapStart();
 
 	// Get the size of the memory location for the render target view descriptors.
-	renderTargetViewDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	renderTargetViewDescriptorSize = m_pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
 	// Get a pointer to the first back buffer from the swap chain.
 	m_swapChain->GetBuffer(0, __uuidof(ID3D12Resource), (void**)&m_backBufferRenderTarget[0]);
 
 	// Create a render target view for the first back buffer.
-	m_device->CreateRenderTargetView(m_backBufferRenderTarget[0], NULL, renderTargetViewHandle);
+    m_pDevice->CreateRenderTargetView(m_backBufferRenderTarget[0], NULL, renderTargetViewHandle);
 
 	// Increment the view handle to the next descriptor location in the render target view heap.
 	renderTargetViewHandle.ptr += renderTargetViewDescriptorSize;
@@ -213,16 +215,16 @@ D3DClass::D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, boo
     m_swapChain->GetBuffer(1, __uuidof(ID3D12Resource), (void**)&m_backBufferRenderTarget[1]);
 
 	// Create a render target view for the second back buffer.
-	m_device->CreateRenderTargetView(m_backBufferRenderTarget[1], NULL, renderTargetViewHandle);
+    m_pDevice->CreateRenderTargetView(m_backBufferRenderTarget[1], NULL, renderTargetViewHandle);
 
 	// Finally get the initial index to which buffer is the current back buffer.
 	m_bufferIndex = m_swapChain->GetCurrentBackBufferIndex();
 
 	// Create a command allocator.
-	m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void**)&m_commandAllocator);
+    m_pDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void**)&m_commandAllocator);
 
 	// Create a fence for GPU synchronization.
-	m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(ID3D12Fence), (void**)&m_fence);
+    m_pDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(ID3D12Fence), (void**)&m_fence);
 
 	// Create an event object for the fence.
 	m_fenceEvent = CreateEvent(nullptr, false, false, nullptr);
@@ -241,16 +243,18 @@ D3DClass::D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, boo
         D3D_ROOT_SIGNATURE_VERSION_1, 
         &signature, 
         &error);
-    m_device->CreateRootSignature(
+
+    ID3D12RootSignature* rootSignature;
+
+    m_pDevice->CreateRootSignature(
         0, 
         signature->GetBufferPointer(), 
         signature->GetBufferSize(), 
-        IID_PPV_ARGS(&m_rootSignature));
+        IID_PPV_ARGS(&rootSignature));
 
-    //Create pipeline state, load and compiler shaders.
-    
-    //Note here to change D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION for debug
-    UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+    m_pRootSignature = std::shared_ptr<ID3D12RootSignature>(rootSignature);
+
+    //Create pipeline state, load and compile shaders.
 
     D3DReadFileToBlob(L"DefaultVS.cso", &m_vertexShader);
     D3DReadFileToBlob(L"DefaultHS.cso", &m_hullShader);
@@ -263,9 +267,9 @@ D3DClass::D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, boo
         D3D12_INPUT_ELEMENT_DESC{ "COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
     };
 
-    D3D12_GRAPHICS_PIPELINE_STATE_DESC pipelineDesc = {};
+    /*D3D12_GRAPHICS_PIPELINE_STATE_DESC pipelineDesc = {};
     pipelineDesc.InputLayout = { inputElementDescs.data() , (UINT)inputElementDescs.size() };
-    pipelineDesc.pRootSignature = m_rootSignature;
+    pipelineDesc.pRootSignature = m_pRootSignature.get();
     pipelineDesc.VS = { m_vertexShader->GetBufferPointer(), m_vertexShader->GetBufferSize() };
     pipelineDesc.PS = { m_pixelShader->GetBufferPointer(), m_pixelShader->GetBufferSize() };
     pipelineDesc.HS = { m_hullShader->GetBufferPointer(), m_hullShader->GetBufferSize() };
@@ -279,19 +283,31 @@ D3DClass::D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, boo
     pipelineDesc.NumRenderTargets = 1;
     pipelineDesc.RTVFormats[0] = DXGI_FORMAT_B8G8R8A8_UNORM;
     pipelineDesc.SampleDesc.Count = 1;
-    m_device->CreateGraphicsPipelineState(&pipelineDesc, IID_PPV_ARGS(&m_pipelineState));
+    ID3D12PipelineState* state = nullptr;
+    m_pDevice->CreateGraphicsPipelineState(&pipelineDesc, IID_PPV_ARGS(&state));
+    m_pPipeline = state;*/
+
+    m_pPipeline = std::shared_ptr<Pipeline>(new Pipeline());
+    m_pPipeline->setInputLayout({ inputElementDescs.data() , (UINT)inputElementDescs.size() });
+    m_pPipeline->setRootSignature(m_pRootSignature);
+    m_pPipeline->loadShader(Pipeline::VERTEX_SHADER, L"DefaultVS.cso");
+    m_pPipeline->loadShader(Pipeline::HULL_SHADER, L"DefaultHS.cso");
+    m_pPipeline->loadShader(Pipeline::DOMAIN_SHADER, L"DefaultDS.cso");
+    m_pPipeline->loadShader(Pipeline::PIXEL_SHADER, L"DefaultPS.cso");
+    m_pPipeline->createPipeline(m_pDevice);
 
     // Create a basic command list.
-    m_device->CreateCommandList(
+    m_pDevice->CreateCommandList(
         0, 
         D3D12_COMMAND_LIST_TYPE_DIRECT, 
         m_commandAllocator, 
-        m_pipelineState, 
+        m_pPipeline->getPipelineState().get(), 
         IID_PPV_ARGS(&m_commandList));
 
     // Initially we need to close the command list during initialization as it is created in a recording state.
     m_commandList->Close();
 
+    // TODO: Move it from here
     Vertex triangleVertices[] =
     {
         { { 0.0f, 0.5f, 0.f }, { 1.f, 0.f, 0.f, 1.f } },
@@ -335,7 +351,7 @@ std::shared_ptr<ID3D12Resource> D3DClass::createBufferFromData(unsigned char* da
 {
     ID3D12Resource* pBuffer = nullptr;
 
-    m_device->CreateCommittedResource(
+    m_pDevice->CreateCommittedResource(
         &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
         D3D12_HEAP_FLAG_NONE,
         &CD3DX12_RESOURCE_DESC::Buffer(size),
@@ -371,11 +387,11 @@ void D3DClass::shutdown()
 	}
 
 	// Release the empty pipe line state.
-	if (m_pipelineState)
+	/*if (m_pipelineState)
 	{
 		m_pipelineState->Release();
 		m_pipelineState = nullptr;
-	}
+	}*/
 
 	// Release the command list.
 	if (m_commandList)
@@ -423,13 +439,6 @@ void D3DClass::shutdown()
 		m_commandQueue->Release();
 		m_commandQueue = nullptr;
 	}
-
-	// Release the device.
-	if (m_device)
-	{
-		m_device->Release();
-		m_device = nullptr;
-	}
 }
 
 bool D3DClass::render()
@@ -445,9 +454,9 @@ bool D3DClass::render()
 	m_commandAllocator->Reset();
 
 	// Reset the command list, use empty pipeline state for now since there are no shaders and we are just clearing the screen.
-	m_commandList->Reset(m_commandAllocator, m_pipelineState);
+	m_commandList->Reset(m_commandAllocator, m_pPipeline->getPipelineState().get());
 
-    m_commandList->SetGraphicsRootSignature(m_rootSignature);
+    m_commandList->SetGraphicsRootSignature(m_pRootSignature.get());
     m_commandList->RSSetViewports(1, &m_viewport);
     m_commandList->RSSetScissorRects(1, &m_scissorRect);
 
@@ -457,7 +466,7 @@ bool D3DClass::render()
 
 	// Get the render target view handle for the current back buffer.
 	renderTargetViewHandle = m_renderTargetViewHeap->GetCPUDescriptorHandleForHeapStart();
-	renderTargetViewDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	renderTargetViewDescriptorSize = m_pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 	if (m_bufferIndex == 1)
 	{
 		renderTargetViewHandle.ptr += renderTargetViewDescriptorSize;
@@ -509,4 +518,9 @@ bool D3DClass::render()
     m_bufferIndex = 1 - m_bufferIndex;
 
 	return true;
+}
+
+std::shared_ptr<ID3D12Device> D3DClass::getDevice()
+{
+    return m_pDevice;
 }

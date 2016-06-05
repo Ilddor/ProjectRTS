@@ -30,6 +30,9 @@
     <ClInclude Include="Headers\SystemPlayground.h">
       <Filter>Headers</Filter>
     </ClInclude>
+    <ClInclude Include="Headers\Pipeline.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Sources\D3D.cpp">
@@ -45,6 +48,9 @@
       <Filter>Sources</Filter>
     </ClCompile>
     <ClCompile Include="Sources\SystemPlayground.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="Sources\Pipeline.cpp">
       <Filter>Sources</Filter>
     </ClCompile>
   </ItemGroup>
