@@ -7,19 +7,19 @@ GraphicsClass::GraphicsClass(int screenHeight, int screenWidth, HWND hwnd)
 }
 
 
-bool GraphicsClass::Frame()
+bool GraphicsClass::processFrame()
 {
 	bool result;
 
 	// Render the graphics scene.
-	result = Render();
+	result = render();
 
 	return result;
 }
 
 
-bool GraphicsClass::Render()
+bool GraphicsClass::render()
 {
-    m_direct3D->Render();
+    m_direct3D->render();
 	return true;
 }

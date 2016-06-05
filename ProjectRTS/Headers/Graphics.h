@@ -9,7 +9,7 @@ class GraphicsClass
 {
 public:
 	GraphicsClass(int screenHeight, int screenWidth, HWND hwnd);
-	bool Frame();
+	bool processFrame();
 
     static const bool FULL_SCREEN = false;
     static const bool VSYNC_ENABLED = true;
@@ -17,7 +17,7 @@ public:
     const float SCREEN_NEAR = 0.1f;
 
 private:
-	bool Render();
+	bool render();
 
     std::unique_ptr<D3DClass> m_direct3D;
 };

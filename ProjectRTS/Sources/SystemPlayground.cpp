@@ -10,19 +10,19 @@ SystemClass::SystemClass() :
     screenWidth = 0;
 
     // Initialize the windows api.
-    InitializeWindows(screenHeight, screenWidth);
+    initializeWindows(screenHeight, screenWidth);
 
     // Create the graphics object.  This object will handle rendering all the graphics for this application.
     m_graphics = std::unique_ptr<GraphicsClass> (new GraphicsClass(screenHeight, screenWidth, m_hwnd));
 }
 
-void SystemClass::Shutdown()
+void SystemClass::shutdown()
 {
 	// Shutdown the window.
-	ShutdownWindows();
+	shutdownWindows();
 }
 
-void SystemClass::Run()
+void SystemClass::run()
 {
 	MSG msg;
 	bool done, result;
@@ -50,7 +50,7 @@ void SystemClass::Run()
 		else
 		{
 			// Otherwise do the frame processing.
-			result = RenderFrame();
+			result = processFrame();
 			if (!result)
 			{
 				done = true;
@@ -60,37 +60,37 @@ void SystemClass::Run()
 	}
 }
 
-bool SystemClass::RenderFrame()
+bool SystemClass::processFrame()
 {
 	bool result;
 
 
 	// Check if the user pressed escape and wants to exit the application.
-	if (m_input->IsKeyDown(VK_ESCAPE))
+	if (m_input->isKeyDown(VK_ESCAPE))
 	{
 		return false;
 	}
 
 	// Do the frame processing for the graphics object.
-	result = m_graphics->Frame();
+	result = m_graphics->processFrame();
 
 	return result;
 }
 
-LRESULT CALLBACK SystemClass::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam, LPARAM lparam)
+LRESULT CALLBACK SystemClass::messageHandler(HWND hwnd, UINT umsg, WPARAM wparam, LPARAM lparam)
 {
 	switch (umsg)
 	{
 		// Check if a key has been pressed on the keyboard.
 	case WM_KEYDOWN:
 		// If a key is pressed send it to the input object so it can record that state.
-		m_input->KeyDown((unsigned int)wparam);
+		m_input->keyDown((unsigned int)wparam);
         break;
 
 	// Check if a key has been released on the keyboard.
 	case WM_KEYUP:
 		// If a key is released then send it to the input object so it can unset the state for that key.
-		m_input->KeyUp((unsigned int)wparam);
+		m_input->keyUp((unsigned int)wparam);
         break;
 
 	// Any other messages send to the default message handler as our application won't make use of them.
@@ -101,7 +101,7 @@ LRESULT CALLBACK SystemClass::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam
     return 0;
 }
 
-void SystemClass::InitializeWindows(int& screenHeight, int& screenWidth)
+void SystemClass::initializeWindows(int& screenHeight, int& screenWidth)
 {
 	WNDCLASSEX wc;
 	DEVMODE dmScreenSettings;
@@ -180,7 +180,7 @@ void SystemClass::InitializeWindows(int& screenHeight, int& screenWidth)
 	//ShowCursor(false);
 }
 
-void SystemClass::ShutdownWindows()
+void SystemClass::shutdownWindows()
 {
 	// Show the mouse cursor.
 	ShowCursor(true);
@@ -219,7 +219,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT umessage, WPARAM wparam, LPARAM lparam)
 
 	// All other messages pass to the message handler in the system class.
 	default:
-		return ApplicationHandle->MessageHandler(hwnd, umessage, wparam, lparam);
+		return ApplicationHandle->messageHandler(hwnd, umessage, wparam, lparam);
 	}
 
     return 0;

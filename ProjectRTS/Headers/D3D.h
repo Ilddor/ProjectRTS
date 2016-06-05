@@ -6,6 +6,7 @@
 
 #include <d3d12.h>
 #include <dxgi1_4.h>
+#include <memory>
 
 class D3DClass
 {
@@ -30,13 +31,13 @@ public:
     };
 
 	D3DClass();
-	D3DClass(const D3DClass&);
     D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, bool fullscreen);
-	~D3DClass();
 
-	void Shutdown();
+    std::shared_ptr<ID3D12Resource> createBufferFromData(unsigned char* data, unsigned long long size);
 
-	bool Render();
+	void shutdown();
+
+	bool render();
 
 private:
 
@@ -60,7 +61,7 @@ private:
     ID3DBlob* m_hullShader;
     ID3DBlob* m_domainShader;
     ID3D12RootSignature* m_rootSignature;
-    ID3D12Resource*  m_vertexBuffer;
+    std::shared_ptr<ID3D12Resource>  m_vertexBuffer;
     D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
     D3D12_VIEWPORT m_viewport;
     D3D12_RECT m_scissorRect;

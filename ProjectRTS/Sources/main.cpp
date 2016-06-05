@@ -8,10 +8,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR pScmdline,
 
 
 	// Create the system object.
-    system.Run();
+    system.run();
 
 	// Shutdown and release the system object.
-	system.Shutdown();
+	system.shutdown();
 
 	return 0;
 }

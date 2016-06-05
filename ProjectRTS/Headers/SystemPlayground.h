@@ -12,15 +12,15 @@ class SystemClass
 public:
 	SystemClass();
 
-	void Shutdown();
-	void Run();
+	void shutdown();
+	void run();
 
-	LRESULT CALLBACK MessageHandler(HWND, UINT, WPARAM, LPARAM);
+	LRESULT CALLBACK messageHandler(HWND, UINT, WPARAM, LPARAM);
 
 private:
-	bool RenderFrame();
-	void InitializeWindows(int&, int&);
-	void ShutdownWindows();
+	bool processFrame();
+	void initializeWindows(int&, int&);
+	void shutdownWindows();
 
 private:
 	LPCWSTR m_applicationName;

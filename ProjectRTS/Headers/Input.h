@@ -7,10 +7,10 @@ class InputClass
 public:
 	InputClass();
 
-	void KeyDown(unsigned int);
-	void KeyUp(unsigned int);
+	void keyDown(unsigned int);
+	void keyUp(unsigned int);
 
-	bool IsKeyDown(unsigned int);
+	bool isKeyDown(unsigned int);
 
 private:
 	std::array<bool, 256> m_keys;

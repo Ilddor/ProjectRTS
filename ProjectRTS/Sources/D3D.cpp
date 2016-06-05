@@ -23,16 +23,6 @@ D3DClass::D3DClass()
     m_rootSignature = nullptr;
 }
 
-
-D3DClass::D3DClass(const D3DClass& other)
-{
-}
-
-
-D3DClass::~D3DClass()
-{
-}
-
 D3DClass::D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, bool fullscreen)
 {
 	D3D_FEATURE_LEVEL featureLevel;
@@ -311,19 +301,7 @@ D3DClass::D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, boo
 
     const UINT vertexBufferSize = sizeof(triangleVertices);
 
-    m_device->CreateCommittedResource(
-        &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-        D3D12_HEAP_FLAG_NONE,
-        &CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize),
-        D3D12_RESOURCE_STATE_GENERIC_READ,
-        nullptr,
-        IID_PPV_ARGS(&m_vertexBuffer));
-
-    UINT8* pVertexDataBegin;
-    CD3DX12_RANGE readRange(0, 0);
-    m_vertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin));
-    memcpy(pVertexDataBegin, triangleVertices, vertexBufferSize);
-    m_vertexBuffer->Unmap(0, nullptr);
+    m_vertexBuffer = createBufferFromData(reinterpret_cast<unsigned char*>(triangleVertices), vertexBufferSize);
 
     m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
     m_vertexBufferView.StrideInBytes = sizeof(Vertex);
@@ -353,7 +331,28 @@ D3DClass::D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, boo
     }
 }
 
-void D3DClass::Shutdown()
+std::shared_ptr<ID3D12Resource> D3DClass::createBufferFromData(unsigned char* data, unsigned long long size)
+{
+    ID3D12Resource* pBuffer = nullptr;
+
+    m_device->CreateCommittedResource(
+        &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+        D3D12_HEAP_FLAG_NONE,
+        &CD3DX12_RESOURCE_DESC::Buffer(size),
+        D3D12_RESOURCE_STATE_GENERIC_READ,
+        nullptr,
+        IID_PPV_ARGS(&pBuffer));
+
+    unsigned char* pDataBegin;
+    CD3DX12_RANGE readRange(0, 0);
+    pBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pDataBegin));
+    memcpy(pDataBegin, data, size);
+    pBuffer->Unmap(0, nullptr);
+
+    return std::shared_ptr<ID3D12Resource>(pBuffer);
+}
+
+void D3DClass::shutdown()
 {
 	// Before shutting down set to windowed mode or when you release the swap chain it will throw an exception.
 	if (m_swapChain)
@@ -433,7 +432,7 @@ void D3DClass::Shutdown()
 	}
 }
 
-bool D3DClass::Render()
+bool D3DClass::render()
 {
 	D3D12_RESOURCE_BARRIER barrier;
 	D3D12_CPU_DESCRIPTOR_HANDLE renderTargetViewHandle;
