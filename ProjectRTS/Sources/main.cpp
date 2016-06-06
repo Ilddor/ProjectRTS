@@ -4,8 +4,6 @@
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR pScmdline, int iCmdshow)
 {
 	SystemClass system;
-	bool result;
-
 
 	// Create the system object.
     system.run();

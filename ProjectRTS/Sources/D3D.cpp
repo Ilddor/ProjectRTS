@@ -13,9 +13,6 @@ D3DClass::D3DClass()
 	m_renderTargetViewHeap = nullptr;
 	m_backBufferRenderTarget[0] = nullptr;
 	m_backBufferRenderTarget[1] = nullptr;
-	m_commandAllocator = nullptr;
-	m_commandList = nullptr;
-	//m_pipelineState = nullptr;
 	m_fence = nullptr;
 	m_fenceEvent = nullptr;
     m_vertexShader = nullptr;
@@ -221,7 +218,9 @@ D3DClass::D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, boo
 	m_bufferIndex = m_swapChain->GetCurrentBackBufferIndex();
 
 	// Create a command allocator.
-    m_pDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void**)&m_commandAllocator);
+    ID3D12CommandAllocator* pCommandAllocator = nullptr;
+    m_pDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void**)&pCommandAllocator);
+    m_pCommandAllocator = std::shared_ptr<ID3D12CommandAllocator>(pCommandAllocator);
 
 	// Create a fence for GPU synchronization.
     m_pDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(ID3D12Fence), (void**)&m_fence);
@@ -256,7 +255,7 @@ D3DClass::D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, boo
 
     //Create pipeline state, load and compile shaders.
 
-    std::array<D3D12_INPUT_ELEMENT_DESC, 2> inputElementDescs = 
+    std::array<D3D12_INPUT_ELEMENT_DESC, 2> inputElementDescs =
     {
         D3D12_INPUT_ELEMENT_DESC{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
         D3D12_INPUT_ELEMENT_DESC{ "COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
@@ -272,15 +271,10 @@ D3DClass::D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, boo
     m_pPipeline->createPipeline(m_pDevice);
 
     // Create a basic command list.
-    m_pDevice->CreateCommandList(
-        0, 
-        D3D12_COMMAND_LIST_TYPE_DIRECT, 
-        m_commandAllocator, 
-        m_pPipeline->getPipelineState().get(), 
-        IID_PPV_ARGS(&m_commandList));
+    m_pCommandList = createCommandList(m_pPipeline);
 
     // Initially we need to close the command list during initialization as it is created in a recording state.
-    m_commandList->Close();
+    m_pCommandList->Close();
 
     // TODO: Move it from here
     Vertex triangleVertices[] =
@@ -322,7 +316,7 @@ D3DClass::D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, boo
     }
 }
 
-std::shared_ptr<ID3D12Resource> D3DClass::createBufferFromData(unsigned char* data, unsigned long long size)
+std::shared_ptr<ID3D12Resource> D3DClass::createBufferFromData(unsigned char* pData, unsigned long long size)
 {
     ID3D12Resource* pBuffer = nullptr;
 
@@ -337,10 +331,24 @@ std::shared_ptr<ID3D12Resource> D3DClass::createBufferFromData(unsigned char* da
     unsigned char* pDataBegin;
     CD3DX12_RANGE readRange(0, 0);
     pBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pDataBegin));
-    memcpy(pDataBegin, data, size);
+    memcpy(pDataBegin, pData, size);
     pBuffer->Unmap(0, nullptr);
 
     return std::shared_ptr<ID3D12Resource>(pBuffer);
+}
+
+std::shared_ptr<ID3D12GraphicsCommandList> D3DClass::createCommandList(std::shared_ptr<Pipeline> pPipeline)
+{
+    ID3D12GraphicsCommandList* pCommandList = nullptr;
+
+    m_pDevice->CreateCommandList(
+        0,
+        D3D12_COMMAND_LIST_TYPE_DIRECT,
+        m_pCommandAllocator.get(),
+        pPipeline->getPipelineState().get(),
+        IID_PPV_ARGS(&pCommandList));
+
+    return std::shared_ptr<ID3D12GraphicsCommandList>(pCommandList);
 }
 
 void D3DClass::shutdown()
@@ -359,27 +367,6 @@ void D3DClass::shutdown()
 	{
 		m_fence->Release();
 		m_fence = nullptr;
-	}
-
-	// Release the empty pipe line state.
-	/*if (m_pipelineState)
-	{
-		m_pipelineState->Release();
-		m_pipelineState = nullptr;
-	}*/
-
-	// Release the command list.
-	if (m_commandList)
-	{
-		m_commandList->Release();
-		m_commandList = nullptr;
-	}
-
-	// Release the command allocator.
-	if (m_commandAllocator)
-	{
-		m_commandAllocator->Release();
-		m_commandAllocator = nullptr;
 	}
 
 	// Release the back buffer render target views.
@@ -426,18 +413,18 @@ bool D3DClass::render()
 	unsigned long long fenceToWaitFor;
 
 	// Reset (re-use) the memory associated command allocator.
-	m_commandAllocator->Reset();
+	m_pCommandAllocator->Reset();
 
 	// Reset the command list, use empty pipeline state for now since there are no shaders and we are just clearing the screen.
-	m_commandList->Reset(m_commandAllocator, m_pPipeline->getPipelineState().get());
+	m_pCommandList->Reset(m_pCommandAllocator.get(), m_pPipeline->getPipelineState().get());
 
-    m_commandList->SetGraphicsRootSignature(m_pRootSignature.get());
-    m_commandList->RSSetViewports(1, &m_viewport);
-    m_commandList->RSSetScissorRects(1, &m_scissorRect);
+    m_pCommandList->SetGraphicsRootSignature(m_pRootSignature.get());
+    m_pCommandList->RSSetViewports(1, &m_viewport);
+    m_pCommandList->RSSetScissorRects(1, &m_scissorRect);
 
 	// Record commands in the command list now.
 	// Start by setting the resource barrier.
-    m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_backBufferRenderTarget[m_bufferIndex], D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
+    m_pCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_backBufferRenderTarget[m_bufferIndex], D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
 	// Get the render target view handle for the current back buffer.
 	renderTargetViewHandle = m_renderTargetViewHeap->GetCPUDescriptorHandleForHeapStart();
@@ -448,27 +435,27 @@ bool D3DClass::render()
 	}
 
 	// Set the back buffer as the render target.
-	m_commandList->OMSetRenderTargets(1, &renderTargetViewHandle, false, nullptr);
+    m_pCommandList->OMSetRenderTargets(1, &renderTargetViewHandle, false, nullptr);
 
 	// Then set the color to clear the window to.
 	color[0] = 0.5;
 	color[1] = 0.5;
 	color[2] = 0.5;
 	color[3] = 1.0;
-	m_commandList->ClearRenderTargetView(renderTargetViewHandle, color, 0, nullptr);
+    m_pCommandList->ClearRenderTargetView(renderTargetViewHandle, color, 0, nullptr);
 
-    m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST);
-    m_commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
-    m_commandList->DrawInstanced(3, 1, 0, 0);
+    m_pCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST);
+    m_pCommandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
+    m_pCommandList->DrawInstanced(3, 1, 0, 0);
 
 	// Indicate that the back buffer will now be used to present.
-    m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_backBufferRenderTarget[m_bufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+    m_pCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_backBufferRenderTarget[m_bufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 
 	// Close the list of commands.
-	m_commandList->Close();
+    m_pCommandList->Close();
 
 	// Load the command list array (only one command list for now).
-	ppCommandLists[0] = m_commandList;
+	ppCommandLists[0] = m_pCommandList.get();
 
 	// Execute the list of commands.
 	m_commandQueue->ExecuteCommandLists(1, ppCommandLists);
@@ -498,4 +485,14 @@ bool D3DClass::render()
 std::shared_ptr<ID3D12Device> D3DClass::getDevice()
 {
     return m_pDevice;
+}
+
+std::shared_ptr<ID3D12RootSignature> D3DClass::getRootSignature()
+{
+    return m_pRootSignature;
+}
+
+std::shared_ptr<ID3D12CommandAllocator> D3DClass::getCommandAllocator()
+{
+    return m_pCommandAllocator;
 }

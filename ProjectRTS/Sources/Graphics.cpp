@@ -1,8 +1,10 @@
 #include "Graphics.h"
 
+#include <d3d12.h>
+#include <array>
 
 GraphicsClass::GraphicsClass(int screenHeight, int screenWidth, HWND hwnd)
-	: m_direct3D(new D3DClass(screenHeight, screenWidth, hwnd, VSYNC_ENABLED, FULL_SCREEN))
+	: m_pDirect3D(new D3DClass(screenHeight, screenWidth, hwnd, VSYNC_ENABLED, FULL_SCREEN))
 {
 }
 
@@ -20,6 +22,6 @@ bool GraphicsClass::processFrame()
 
 bool GraphicsClass::render()
 {
-    m_direct3D->render();
+    m_pDirect3D->render();
 	return true;
 }

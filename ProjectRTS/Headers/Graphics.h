@@ -19,5 +19,5 @@ public:
 private:
 	bool render();
 
-    std::unique_ptr<D3DClass> m_direct3D;
+    std::unique_ptr<D3DClass> m_pDirect3D;
 };

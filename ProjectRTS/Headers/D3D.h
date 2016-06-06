@@ -7,6 +7,8 @@
 #include <d3d12.h>
 #include <dxgi1_4.h>
 #include <memory>
+#include <functional>
+#include <vector>
 
 #include "Pipeline.h"
 
@@ -36,13 +38,15 @@ public:
     D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, bool fullscreen);
 
     std::shared_ptr<ID3D12Resource> createBufferFromData(unsigned char* data, unsigned long long size);
+    std::shared_ptr<ID3D12GraphicsCommandList> createCommandList(std::shared_ptr<Pipeline> pipeline);
 
 	void shutdown();
 
 	bool render();
 
     std::shared_ptr<ID3D12Device> getDevice();
-
+    std::shared_ptr<ID3D12RootSignature> getRootSignature();
+    std::shared_ptr<ID3D12CommandAllocator> getCommandAllocator();
 private:
 
 	bool m_vsync_enabled;
@@ -54,8 +58,8 @@ private:
 	ID3D12Resource* m_backBufferRenderTarget[2];
 	unsigned int m_bufferIndex;
 	unsigned int m_videoCardMemory;
-	ID3D12CommandAllocator* m_commandAllocator;
-	ID3D12GraphicsCommandList* m_commandList;
+    std::shared_ptr<ID3D12CommandAllocator> m_pCommandAllocator;
+    std::shared_ptr<ID3D12GraphicsCommandList> m_pCommandList;
 	//ID3D12PipelineState* m_pPipeline;
     std::shared_ptr<Pipeline> m_pPipeline;
 	ID3D12Fence* m_fence;
