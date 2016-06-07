@@ -34,8 +34,8 @@ public:
         Float4 color;
     };
 
-	D3DClass();
     D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, bool fullscreen);
+    ~D3DClass();
 
     std::shared_ptr<ID3D12Resource> createBufferFromData(unsigned char* data, unsigned long long size);
     std::shared_ptr<ID3D12GraphicsCommandList> createCommandList(std::shared_ptr<Pipeline> pipeline);
@@ -44,39 +44,29 @@ public:
         std::vector<std::shared_ptr<ID3D12Resource>> &renderTargetsArray, 
         std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> &renderTargetViewHandles);
 
-	void shutdown();
+	//void shutdown();
 
-	bool render();
+    void executeCommandList(unsigned int count, ID3D12CommandList*const* lists);
+    void presentBackBuffer();
 
     std::shared_ptr<ID3D12Device> getDevice();
     std::shared_ptr<ID3D12RootSignature> getRootSignature();
     std::shared_ptr<ID3D12CommandAllocator> getCommandAllocator();
+
+    unsigned int getBackBufferIndex();
 private:
 
 	bool m_vsync_enabled;
 	std::shared_ptr<ID3D12Device> m_pDevice;
-	ID3D12CommandQueue* m_commandQueue;
+    std::shared_ptr<ID3D12CommandQueue> m_pCommandQueue;
 	char m_videoCardDescription[128];
-	IDXGISwapChain3* m_swapChain;
-    std::shared_ptr<ID3D12DescriptorHeap> m_pRenderTargetViewHeap;
-    std::vector<std::shared_ptr<ID3D12Resource>> m_backBufferRenderTargets;
-    std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> m_renderTargetViewHandles;
-	unsigned int m_bufferIndex;
+    std::shared_ptr<IDXGISwapChain3> m_pSwapChain;
+	unsigned int m_backBufferIndex;
+    unsigned int m_backBuffersCount;
 	unsigned int m_videoCardMemory;
     std::shared_ptr<ID3D12CommandAllocator> m_pCommandAllocator;
-    std::shared_ptr<ID3D12GraphicsCommandList> m_pCommandList;
-	//ID3D12PipelineState* m_pPipeline;
-    std::shared_ptr<Pipeline> m_pPipeline;
-	ID3D12Fence* m_fence;
+    std::shared_ptr<ID3D12Fence> m_pFence;
 	HANDLE m_fenceEvent;
 	unsigned long long m_fenceValue;
-    ID3DBlob* m_vertexShader;
-    ID3DBlob* m_pixelShader;
-    ID3DBlob* m_hullShader;
-    ID3DBlob* m_domainShader;
     std::shared_ptr<ID3D12RootSignature> m_pRootSignature;
-    std::shared_ptr<ID3D12Resource>  m_vertexBuffer;
-    D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
-    D3D12_VIEWPORT m_viewport;
-    D3D12_RECT m_scissorRect;
 };

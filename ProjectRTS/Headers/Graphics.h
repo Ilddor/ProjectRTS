@@ -9,7 +9,7 @@ class GraphicsClass
 {
 public:
 	GraphicsClass(int screenHeight, int screenWidth, HWND hwnd);
-	bool processFrame();
+	bool render();
 
     static const bool FULL_SCREEN = false;
     static const bool VSYNC_ENABLED = true;
@@ -17,7 +17,18 @@ public:
     const float SCREEN_NEAR = 0.1f;
 
 private:
-	bool render();
+    void GraphicsClass::recordCommandList();
 
     std::unique_ptr<D3DClass> m_pDirect3D;
+
+    std::shared_ptr<Pipeline> m_pPipeline;
+    std::shared_ptr<ID3D12DescriptorHeap> m_pRenderTargetViewHeap;
+    std::vector<std::shared_ptr<ID3D12Resource>> m_backBufferRenderTargets;
+    std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> m_renderTargetViewHandles;
+    std::shared_ptr<ID3D12GraphicsCommandList> m_pCommandList;
+    std::shared_ptr<ID3D12Resource>  m_pVertexBuffer;
+    D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
+
+    D3D12_VIEWPORT m_viewport;
+    D3D12_RECT m_scissorRect;
 };

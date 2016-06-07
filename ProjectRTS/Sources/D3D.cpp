@@ -5,18 +5,6 @@
 #include <fstream>
 #include <stdlib.h>
 
-D3DClass::D3DClass()
-{
-    m_pDevice = nullptr;
-	m_commandQueue = nullptr;
-	m_swapChain = nullptr;
-	m_fence = nullptr;
-	m_fenceEvent = nullptr;
-    m_vertexShader = nullptr;
-    m_pixelShader = nullptr;
-    m_pRootSignature = nullptr;
-}
-
 D3DClass::D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, bool fullscreen)
 {
 	D3D_FEATURE_LEVEL featureLevel;
@@ -25,7 +13,7 @@ D3DClass::D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, boo
 	IDXGIFactory4* factory;
 	IDXGIAdapter* adapter;
 	IDXGIOutput* adapterOutput;
-	unsigned int numModes, i, numerator, denominator, renderTargetViewDescriptorSize;
+	unsigned int numModes, i, numerator, denominator;
 	UINT stringLength;
 	DXGI_MODE_DESC* displayModeList;
 	DXGI_ADAPTER_DESC adapterDesc;
@@ -59,7 +47,9 @@ D3DClass::D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, boo
 	commandQueueDesc.NodeMask = 0;
 
 	// Create the command queue.
-    m_pDevice->CreateCommandQueue(&commandQueueDesc, __uuidof(ID3D12CommandQueue), (void**)&m_commandQueue);
+    ID3D12CommandQueue* commandQueue = nullptr;
+    m_pDevice->CreateCommandQueue(&commandQueueDesc, __uuidof(ID3D12CommandQueue), (void**)&commandQueue);
+    m_pCommandQueue = std::shared_ptr<ID3D12CommandQueue>(commandQueue);
 
 	// Create a DirectX graphics interface factory.
 	CreateDXGIFactory1(__uuidof(IDXGIFactory4), (void**)&factory);
@@ -164,11 +154,13 @@ D3DClass::D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, boo
 	swapChainDesc.Flags = 0;
 
 	// Finally create the swap chain using the swap chain description.	
-	factory->CreateSwapChain(m_commandQueue, &swapChainDesc, &swapChain);
+	factory->CreateSwapChain(m_pCommandQueue.get(), &swapChainDesc, &swapChain);
 
 	// Next upgrade the IDXGISwapChain to a IDXGISwapChain3 interface and store it in a private member variable named m_swapChain.
 	// This will allow us to use the newer functionality such as getting the current back buffer index.
-	swapChain->QueryInterface(__uuidof(IDXGISwapChain3), (void**)&m_swapChain);
+    IDXGISwapChain3* swapChain3 = nullptr;
+	swapChain->QueryInterface(__uuidof(IDXGISwapChain3), (void**)&swapChain3);
+    m_pSwapChain = std::shared_ptr<IDXGISwapChain3>(swapChain3);
 
 	// Clear pointer to original swap chain interface since we are using version 3 instead (m_swapChain).
 	swapChain = nullptr;
@@ -177,19 +169,15 @@ D3DClass::D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, boo
 	factory->Release();
 	factory = nullptr;
 
-    // Init render targets with their view handles and view heap
-    createRenderTarget(2, m_pRenderTargetViewHeap, m_backBufferRenderTargets, m_renderTargetViewHandles);
-
-	// Finally get the initial index to which buffer is the current back buffer.
-	m_bufferIndex = m_swapChain->GetCurrentBackBufferIndex();
-
 	// Create a command allocator.
     ID3D12CommandAllocator* pCommandAllocator = nullptr;
     m_pDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void**)&pCommandAllocator);
     m_pCommandAllocator = std::shared_ptr<ID3D12CommandAllocator>(pCommandAllocator);
 
 	// Create a fence for GPU synchronization.
-    m_pDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(ID3D12Fence), (void**)&m_fence);
+    ID3D12Fence* fence = nullptr;
+    m_pDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(ID3D12Fence), (void**)&fence);
+    m_pFence = std::shared_ptr<ID3D12Fence>(fence);
 
 	// Create an event object for the fence.
 	m_fenceEvent = CreateEvent(nullptr, false, false, nullptr);
@@ -219,67 +207,35 @@ D3DClass::D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, boo
 
     m_pRootSignature = std::shared_ptr<ID3D12RootSignature>(rootSignature);
 
-    //Create pipeline state, load and compile shaders.
-
-    std::array<D3D12_INPUT_ELEMENT_DESC, 2> inputElementDescs =
-    {
-        D3D12_INPUT_ELEMENT_DESC{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        D3D12_INPUT_ELEMENT_DESC{ "COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
-    };
-
-    m_pPipeline = std::shared_ptr<Pipeline>(new Pipeline());
-    m_pPipeline->setInputLayout({ inputElementDescs.data() , (UINT)inputElementDescs.size() });
-    m_pPipeline->setRootSignature(m_pRootSignature);
-    m_pPipeline->loadShader(Pipeline::VERTEX_SHADER, L"DefaultVS.cso");
-    m_pPipeline->loadShader(Pipeline::HULL_SHADER, L"DefaultHS.cso");
-    m_pPipeline->loadShader(Pipeline::DOMAIN_SHADER, L"DefaultDS.cso");
-    m_pPipeline->loadShader(Pipeline::PIXEL_SHADER, L"DefaultPS.cso");
-    m_pPipeline->createPipeline(m_pDevice);
-
-    // Create a basic command list.
-    m_pCommandList = createCommandList(m_pPipeline);
-
-    // Initially we need to close the command list during initialization as it is created in a recording state.
-    m_pCommandList->Close();
-
-    // TODO: Move it from here
-    Vertex triangleVertices[] =
-    {
-        { { 0.0f, 0.5f, 0.f }, { 1.f, 0.f, 0.f, 1.f } },
-        { { 0.5f, -0.5f, 0.f },{ 0.f, 1.f, 0.f, 1.f } },
-        { { -0.5f, -0.5f, 0.f },{ 0.f, 0.f, 1.f, 1.f } },
-    };
-
-    const UINT vertexBufferSize = sizeof(triangleVertices);
-
-    m_vertexBuffer = createBufferFromData(reinterpret_cast<unsigned char*>(triangleVertices), vertexBufferSize);
-
-    m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
-    m_vertexBufferView.StrideInBytes = sizeof(Vertex);
-    m_vertexBufferView.SizeInBytes = vertexBufferSize;
-
-    m_viewport.Height = screenHeight;
-    m_viewport.Width = screenWidth;
-    m_viewport.MaxDepth = 1000.f;
-    m_viewport.MinDepth = 0.1f;
-    m_viewport.TopLeftX = 0.f;
-    m_viewport.TopLeftY = 0.f;
-
-    m_scissorRect.left = 0;
-    m_scissorRect.right = screenWidth;
-    m_scissorRect.top = 0;
-    m_scissorRect.bottom = screenHeight;
-
     unsigned long long fenceToWaitFor = m_fenceValue;
-    m_commandQueue->Signal(m_fence, fenceToWaitFor);
+    m_pCommandQueue->Signal(m_pFence.get(), fenceToWaitFor);
     m_fenceValue++;
 
     // Wait until the GPU is done rendering.
-    if(m_fence->GetCompletedValue() < fenceToWaitFor)
+    if(m_pFence->GetCompletedValue() < fenceToWaitFor)
     {
-        m_fence->SetEventOnCompletion(fenceToWaitFor, m_fenceEvent);
+        m_pFence->SetEventOnCompletion(fenceToWaitFor, m_fenceEvent);
         WaitForSingleObject(m_fenceEvent, INFINITE);
     }
+}
+
+D3DClass::~D3DClass()
+{
+    // Before shutting down set to windowed mode or when you release the swap chain it will throw an exception.
+    if(m_pSwapChain)
+    {
+        m_pSwapChain->SetFullscreenState(false, NULL);
+    }
+
+    // Close the object handle to the fence event.
+    CloseHandle(m_fenceEvent);
+
+    m_pFence->Release();
+    m_pCommandAllocator->Release();
+    m_pSwapChain->Release();
+    m_pCommandQueue->Release();
+    m_pRootSignature->Release();
+    m_pDevice->Release();
 }
 
 std::shared_ptr<ID3D12Resource> D3DClass::createBufferFromData(unsigned char* pData, unsigned long long size)
@@ -327,6 +283,7 @@ void D3DClass::createRenderTarget(
     D3D12_CPU_DESCRIPTOR_HANDLE renderTargetViewHandle;
     unsigned int renderTargetViewDescriptorSize = m_pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);;
 
+    m_backBuffersCount = count;
     // Set the number of descriptors to two for our two back buffers.  Also set the heap tyupe to render target views.
     renderTargetViewHeapDesc.NumDescriptors = 2;
     renderTargetViewHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
@@ -341,10 +298,10 @@ void D3DClass::createRenderTarget(
     renderTargetViewHandle = pRenderTargetViewHeap->GetCPUDescriptorHandleForHeapStart();
     ID3D12Resource* renderTarget = nullptr;
 
-    for(int i = 0; i < count; ++i)
+    for(unsigned int i = 0; i < count; ++i)
     {
         // Get a pointer to the first back buffer from the swap chain.
-        m_swapChain->GetBuffer(i, __uuidof(ID3D12Resource), (void**)&renderTarget);
+        m_pSwapChain->GetBuffer(i, __uuidof(ID3D12Resource), (void**)&renderTarget);
 
         // Create a render target view for the first back buffer.
         m_pDevice->CreateRenderTargetView(renderTarget, NULL, renderTargetViewHandle);
@@ -355,110 +312,38 @@ void D3DClass::createRenderTarget(
         // Increment the view handle to the next descriptor location in the render target view heap.
         renderTargetViewHandle.ptr += renderTargetViewDescriptorSize;
     }
+
+    // Finally get the initial index to which buffer is the current back buffer.
+    m_backBufferIndex = m_pSwapChain->GetCurrentBackBufferIndex();
 }
 
-void D3DClass::shutdown()
+void D3DClass::executeCommandList(unsigned int count, ID3D12CommandList*const* lists)
 {
-	// Before shutting down set to windowed mode or when you release the swap chain it will throw an exception.
-	if (m_swapChain)
-	{
-		m_swapChain->SetFullscreenState(false, NULL);
-	}
-
-	// Close the object handle to the fence event.
-	CloseHandle(m_fenceEvent);
-
-	// Release the fence.
-	if (m_fence)
-	{
-		m_fence->Release();
-		m_fence = nullptr;
-	}
-
-	// Release the swap chain.
-	if (m_swapChain)
-	{
-		m_swapChain->Release();
-		m_swapChain = nullptr;
-	}
-
-	// Release the command queue.
-	if (m_commandQueue)
-	{
-		m_commandQueue->Release();
-		m_commandQueue = nullptr;
-	}
+    m_pCommandQueue->ExecuteCommandLists(count, lists);
 }
 
-bool D3DClass::render()
+void D3DClass::presentBackBuffer()
 {
-	D3D12_RESOURCE_BARRIER barrier;
-	//D3D12_CPU_DESCRIPTOR_HANDLE renderTargetViewHandle;
-	unsigned int renderTargetViewDescriptorSize;
-	float color[4];
-	ID3D12CommandList* ppCommandLists[1];
-	unsigned long long fenceToWaitFor;
+    unsigned long long fenceToWaitFor;
 
-	// Reset (re-use) the memory associated command allocator.
-	m_pCommandAllocator->Reset();
+    m_pSwapChain->Present(m_vsync_enabled, 0);
 
-	// Reset the command list, use empty pipeline state for now since there are no shaders and we are just clearing the screen.
-	m_pCommandList->Reset(m_pCommandAllocator.get(), m_pPipeline->getPipelineState().get());
+    // Signal and increment the fence value.
+    fenceToWaitFor = m_fenceValue;
+    m_pCommandQueue->Signal(m_pFence.get(), fenceToWaitFor);
+    m_fenceValue++;
 
-    m_pCommandList->SetGraphicsRootSignature(m_pRootSignature.get());
-    m_pCommandList->RSSetViewports(1, &m_viewport);
-    m_pCommandList->RSSetScissorRects(1, &m_scissorRect);
+    // Wait until the GPU is done rendering.
+    if(m_pFence->GetCompletedValue() < fenceToWaitFor)
+    {
+        m_pFence->SetEventOnCompletion(fenceToWaitFor, m_fenceEvent);
+        WaitForSingleObject(m_fenceEvent, INFINITE);
+    }
 
-	// Record commands in the command list now.
-	// Start by setting the resource barrier.
-    m_pCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_backBufferRenderTargets[m_bufferIndex].get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
-
-	// Set the back buffer as the render target.
-    m_pCommandList->OMSetRenderTargets(1, &m_renderTargetViewHandles[m_bufferIndex], false, nullptr);
-
-	// Then set the color to clear the window to.
-	color[0] = 0.5;
-	color[1] = 0.5;
-	color[2] = 0.5;
-	color[3] = 1.0;
-    m_pCommandList->ClearRenderTargetView(m_renderTargetViewHandles[m_bufferIndex], color, 0, nullptr);
-
-    m_pCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST);
-    m_pCommandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
-    m_pCommandList->DrawInstanced(3, 1, 0, 0);
-
-	// Indicate that the back buffer will now be used to present.
-    m_pCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_backBufferRenderTargets[m_bufferIndex].get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
-
-	// Close the list of commands.
-    m_pCommandList->Close();
-
-	// Load the command list array (only one command list for now).
-	ppCommandLists[0] = m_pCommandList.get();
-
-	// Execute the list of commands.
-	m_commandQueue->ExecuteCommandLists(1, ppCommandLists);
-
-	// Finally present the back buffer to the screen since rendering is complete.
-	m_swapChain->Present(m_vsync_enabled, 0);
-
-
-	// Signal and increment the fence value.
-	fenceToWaitFor = m_fenceValue;
-	m_commandQueue->Signal(m_fence, fenceToWaitFor);
-	m_fenceValue++;
-
-	// Wait until the GPU is done rendering.
-	if (m_fence->GetCompletedValue() < fenceToWaitFor)
-	{
-		m_fence->SetEventOnCompletion(fenceToWaitFor, m_fenceEvent);
-		WaitForSingleObject(m_fenceEvent, INFINITE);
-	}
-
-	// Alternate the back buffer index back and forth between 0 and 1 each frame.
-    m_bufferIndex = 1 - m_bufferIndex;
-
-	return true;
+    // Alternate the back buffer index back and forth between 0 and 1 each frame.
+    m_backBufferIndex += 1;
+    if(m_backBufferIndex == m_backBuffersCount)
+        m_backBufferIndex = 0;
 }
 
 std::shared_ptr<ID3D12Device> D3DClass::getDevice()
@@ -474,4 +359,9 @@ std::shared_ptr<ID3D12RootSignature> D3DClass::getRootSignature()
 std::shared_ptr<ID3D12CommandAllocator> D3DClass::getCommandAllocator()
 {
     return m_pCommandAllocator;
+}
+
+unsigned int D3DClass::getBackBufferIndex()
+{
+    return m_backBufferIndex;
 }
