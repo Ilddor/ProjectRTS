@@ -39,6 +39,10 @@ public:
 
     std::shared_ptr<ID3D12Resource> createBufferFromData(unsigned char* data, unsigned long long size);
     std::shared_ptr<ID3D12GraphicsCommandList> createCommandList(std::shared_ptr<Pipeline> pipeline);
+    void createRenderTarget(
+        unsigned int count, std::shared_ptr<ID3D12DescriptorHeap> &pRenderTargetViewHeap, 
+        std::vector<std::shared_ptr<ID3D12Resource>> &renderTargetsArray, 
+        std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> &renderTargetViewHandles);
 
 	void shutdown();
 
@@ -54,8 +58,9 @@ private:
 	ID3D12CommandQueue* m_commandQueue;
 	char m_videoCardDescription[128];
 	IDXGISwapChain3* m_swapChain;
-	ID3D12DescriptorHeap* m_renderTargetViewHeap;
-	ID3D12Resource* m_backBufferRenderTarget[2];
+    std::shared_ptr<ID3D12DescriptorHeap> m_pRenderTargetViewHeap;
+    std::vector<std::shared_ptr<ID3D12Resource>> m_backBufferRenderTargets;
+    std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> m_renderTargetViewHandles;
 	unsigned int m_bufferIndex;
 	unsigned int m_videoCardMemory;
     std::shared_ptr<ID3D12CommandAllocator> m_pCommandAllocator;

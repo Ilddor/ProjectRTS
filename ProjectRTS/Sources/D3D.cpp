@@ -10,9 +10,6 @@ D3DClass::D3DClass()
     m_pDevice = nullptr;
 	m_commandQueue = nullptr;
 	m_swapChain = nullptr;
-	m_renderTargetViewHeap = nullptr;
-	m_backBufferRenderTarget[0] = nullptr;
-	m_backBufferRenderTarget[1] = nullptr;
 	m_fence = nullptr;
 	m_fenceEvent = nullptr;
     m_vertexShader = nullptr;
@@ -34,8 +31,6 @@ D3DClass::D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, boo
 	DXGI_ADAPTER_DESC adapterDesc;
 	DXGI_SWAP_CHAIN_DESC swapChainDesc;
 	IDXGISwapChain* swapChain;
-	D3D12_DESCRIPTOR_HEAP_DESC renderTargetViewHeapDesc;
-	D3D12_CPU_DESCRIPTOR_HANDLE renderTargetViewHandle;
 
 
 	// Store the vsync setting.
@@ -49,7 +44,7 @@ D3DClass::D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, boo
     ID3D12Device* device;
 	result = D3D12CreateDevice(NULL, featureLevel, __uuidof(ID3D12Device), (void**)&device);
     m_pDevice = std::shared_ptr<ID3D12Device>(device);
-	if (FAILED(result))
+	if(FAILED(result))
 	{
 		MessageBox(hwnd, L"Could not create a DirectX 12.1 device.  The default video card does not support DirectX 12.1.", L"DirectX Device Failure", MB_OK);
 	}
@@ -87,11 +82,11 @@ D3DClass::D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, boo
 
 	// Now go through all the display modes and find the one that matches the screen height and width.
 	// When a match is found store the numerator and denominator of the refresh rate for that monitor.
-	for (i = 0; i<numModes; i++)
+	for(i = 0; i<numModes; i++)
 	{
-		if (displayModeList[i].Height == (unsigned int)screenHeight)
+		if(displayModeList[i].Height == (unsigned int)screenHeight)
 		{
-			if (displayModeList[i].Width == (unsigned int)screenWidth)
+			if(displayModeList[i].Width == (unsigned int)screenWidth)
 			{
 				numerator = displayModeList[i].RefreshRate.Numerator;
 				denominator = displayModeList[i].RefreshRate.Denominator;
@@ -146,7 +141,7 @@ D3DClass::D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, boo
     swapChainDesc.Windowed = !fullscreen;
 
 	// Set the refresh rate of the back buffer.
-	if (m_vsync_enabled)
+	if(m_vsync_enabled)
 	{
 		swapChainDesc.BufferDesc.RefreshRate.Numerator = numerator;
 		swapChainDesc.BufferDesc.RefreshRate.Denominator = denominator;
@@ -182,37 +177,8 @@ D3DClass::D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, boo
 	factory->Release();
 	factory = nullptr;
 
-	// Initialize the render target view heap description for the two back buffers.
-	ZeroMemory(&renderTargetViewHeapDesc, sizeof(renderTargetViewHeapDesc));
-
-	// Set the number of descriptors to two for our two back buffers.  Also set the heap tyupe to render target views.
-	renderTargetViewHeapDesc.NumDescriptors = 2;
-	renderTargetViewHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-	renderTargetViewHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-
-	// Create the render target view heap for the back buffers.
-    m_pDevice->CreateDescriptorHeap(&renderTargetViewHeapDesc, __uuidof(ID3D12DescriptorHeap), (void**)&m_renderTargetViewHeap);
-
-	// Get a handle to the starting memory location in the render target view heap to identify where the render target views will be located for the two back buffers.
-	renderTargetViewHandle = m_renderTargetViewHeap->GetCPUDescriptorHandleForHeapStart();
-
-	// Get the size of the memory location for the render target view descriptors.
-	renderTargetViewDescriptorSize = m_pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-
-	// Get a pointer to the first back buffer from the swap chain.
-	m_swapChain->GetBuffer(0, __uuidof(ID3D12Resource), (void**)&m_backBufferRenderTarget[0]);
-
-	// Create a render target view for the first back buffer.
-    m_pDevice->CreateRenderTargetView(m_backBufferRenderTarget[0], NULL, renderTargetViewHandle);
-
-	// Increment the view handle to the next descriptor location in the render target view heap.
-	renderTargetViewHandle.ptr += renderTargetViewDescriptorSize;
-
-	// Get a pointer to the second back buffer from the swap chain.
-    m_swapChain->GetBuffer(1, __uuidof(ID3D12Resource), (void**)&m_backBufferRenderTarget[1]);
-
-	// Create a render target view for the second back buffer.
-    m_pDevice->CreateRenderTargetView(m_backBufferRenderTarget[1], NULL, renderTargetViewHandle);
+    // Init render targets with their view handles and view heap
+    createRenderTarget(2, m_pRenderTargetViewHeap, m_backBufferRenderTargets, m_renderTargetViewHandles);
 
 	// Finally get the initial index to which buffer is the current back buffer.
 	m_bufferIndex = m_swapChain->GetCurrentBackBufferIndex();
@@ -309,7 +275,7 @@ D3DClass::D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, boo
     m_fenceValue++;
 
     // Wait until the GPU is done rendering.
-    if (m_fence->GetCompletedValue() < fenceToWaitFor)
+    if(m_fence->GetCompletedValue() < fenceToWaitFor)
     {
         m_fence->SetEventOnCompletion(fenceToWaitFor, m_fenceEvent);
         WaitForSingleObject(m_fenceEvent, INFINITE);
@@ -351,6 +317,46 @@ std::shared_ptr<ID3D12GraphicsCommandList> D3DClass::createCommandList(std::shar
     return std::shared_ptr<ID3D12GraphicsCommandList>(pCommandList);
 }
 
+void D3DClass::createRenderTarget(
+    unsigned int                                    count, 
+    std::shared_ptr<ID3D12DescriptorHeap>           &pRenderTargetViewHeap,
+    std::vector<std::shared_ptr<ID3D12Resource>>    &renderTargetsArray,
+    std::vector<D3D12_CPU_DESCRIPTOR_HANDLE>        &renderTargetViewHandles)
+{
+    D3D12_DESCRIPTOR_HEAP_DESC renderTargetViewHeapDesc = {};
+    D3D12_CPU_DESCRIPTOR_HANDLE renderTargetViewHandle;
+    unsigned int renderTargetViewDescriptorSize = m_pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);;
+
+    // Set the number of descriptors to two for our two back buffers.  Also set the heap tyupe to render target views.
+    renderTargetViewHeapDesc.NumDescriptors = 2;
+    renderTargetViewHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+    renderTargetViewHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+
+    // Create the render target view heap for the back buffers.
+    ID3D12DescriptorHeap* renderTargetViewHeap = nullptr;
+    m_pDevice->CreateDescriptorHeap(&renderTargetViewHeapDesc, __uuidof(ID3D12DescriptorHeap), (void**)&renderTargetViewHeap);
+    pRenderTargetViewHeap = std::shared_ptr<ID3D12DescriptorHeap>(renderTargetViewHeap);
+
+    // Get a handle to the starting memory location in the render target view heap to identify where the render target views will be located for the two back buffers.
+    renderTargetViewHandle = pRenderTargetViewHeap->GetCPUDescriptorHandleForHeapStart();
+    ID3D12Resource* renderTarget = nullptr;
+
+    for(int i = 0; i < count; ++i)
+    {
+        // Get a pointer to the first back buffer from the swap chain.
+        m_swapChain->GetBuffer(i, __uuidof(ID3D12Resource), (void**)&renderTarget);
+
+        // Create a render target view for the first back buffer.
+        m_pDevice->CreateRenderTargetView(renderTarget, NULL, renderTargetViewHandle);
+        renderTargetsArray.push_back(std::shared_ptr<ID3D12Resource>(renderTarget));
+        renderTargetViewHandles.push_back(renderTargetViewHandle);
+
+        renderTarget = nullptr;
+        // Increment the view handle to the next descriptor location in the render target view heap.
+        renderTargetViewHandle.ptr += renderTargetViewDescriptorSize;
+    }
+}
+
 void D3DClass::shutdown()
 {
 	// Before shutting down set to windowed mode or when you release the swap chain it will throw an exception.
@@ -367,25 +373,6 @@ void D3DClass::shutdown()
 	{
 		m_fence->Release();
 		m_fence = nullptr;
-	}
-
-	// Release the back buffer render target views.
-	if (m_backBufferRenderTarget[0])
-	{
-		m_backBufferRenderTarget[0]->Release();
-		m_backBufferRenderTarget[0] = nullptr;
-	}
-	if (m_backBufferRenderTarget[1])
-	{
-		m_backBufferRenderTarget[1]->Release();
-		m_backBufferRenderTarget[1] = nullptr;
-	}
-
-	// Release the render target view heap.
-	if (m_renderTargetViewHeap)
-	{
-		m_renderTargetViewHeap->Release();
-		m_renderTargetViewHeap = nullptr;
 	}
 
 	// Release the swap chain.
@@ -406,7 +393,7 @@ void D3DClass::shutdown()
 bool D3DClass::render()
 {
 	D3D12_RESOURCE_BARRIER barrier;
-	D3D12_CPU_DESCRIPTOR_HANDLE renderTargetViewHandle;
+	//D3D12_CPU_DESCRIPTOR_HANDLE renderTargetViewHandle;
 	unsigned int renderTargetViewDescriptorSize;
 	float color[4];
 	ID3D12CommandList* ppCommandLists[1];
@@ -424,32 +411,24 @@ bool D3DClass::render()
 
 	// Record commands in the command list now.
 	// Start by setting the resource barrier.
-    m_pCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_backBufferRenderTarget[m_bufferIndex], D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
-
-	// Get the render target view handle for the current back buffer.
-	renderTargetViewHandle = m_renderTargetViewHeap->GetCPUDescriptorHandleForHeapStart();
-	renderTargetViewDescriptorSize = m_pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-	if (m_bufferIndex == 1)
-	{
-		renderTargetViewHandle.ptr += renderTargetViewDescriptorSize;
-	}
+    m_pCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_backBufferRenderTargets[m_bufferIndex].get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
 	// Set the back buffer as the render target.
-    m_pCommandList->OMSetRenderTargets(1, &renderTargetViewHandle, false, nullptr);
+    m_pCommandList->OMSetRenderTargets(1, &m_renderTargetViewHandles[m_bufferIndex], false, nullptr);
 
 	// Then set the color to clear the window to.
 	color[0] = 0.5;
 	color[1] = 0.5;
 	color[2] = 0.5;
 	color[3] = 1.0;
-    m_pCommandList->ClearRenderTargetView(renderTargetViewHandle, color, 0, nullptr);
+    m_pCommandList->ClearRenderTargetView(m_renderTargetViewHandles[m_bufferIndex], color, 0, nullptr);
 
     m_pCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST);
     m_pCommandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
     m_pCommandList->DrawInstanced(3, 1, 0, 0);
 
 	// Indicate that the back buffer will now be used to present.
-    m_pCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_backBufferRenderTarget[m_bufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+    m_pCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_backBufferRenderTargets[m_bufferIndex].get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 
 	// Close the list of commands.
     m_pCommandList->Close();
