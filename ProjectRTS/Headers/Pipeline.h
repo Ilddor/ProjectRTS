@@ -16,6 +16,7 @@ public:
     };
 
     Pipeline();
+    ~Pipeline();
 
     void createPipeline(std::shared_ptr<ID3D12Device> device);
     void setInputLayout(D3D12_INPUT_LAYOUT_DESC layout);

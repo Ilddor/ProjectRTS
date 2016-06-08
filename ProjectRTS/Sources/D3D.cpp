@@ -317,6 +317,30 @@ void D3DClass::createRenderTarget(
     m_backBufferIndex = m_pSwapChain->GetCurrentBackBufferIndex();
 }
 
+void D3DClass::createConstantBuffer(
+    std::shared_ptr<ID3D12DescriptorHeap> &pConstantBufferViewHeap,
+    std::shared_ptr<ID3D12Resource> &pConstantBuffer,
+    unsigned int bufferSize,
+    D3D12_CPU_DESCRIPTOR_HANDLE &constantBufferViewHandle)
+{
+    D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
+    heapDesc.NumDescriptors = 1;
+    heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+    heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+
+    ID3D12DescriptorHeap* constantBufferHeap = nullptr;
+    m_pDevice->CreateDescriptorHeap(&heapDesc, __uuidof(ID3D12DescriptorHeap), (void**)(&constantBufferHeap));
+    pConstantBufferViewHeap = std::shared_ptr<ID3D12DescriptorHeap>(constantBufferHeap);
+
+    CD3DX12_CPU_DESCRIPTOR_HANDLE cbvHandle(pConstantBufferViewHeap->GetCPUDescriptorHandleForHeapStart(), 0, 0);
+
+    D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc;
+    cbvDesc.BufferLocation = pConstantBuffer->GetGPUVirtualAddress();
+    cbvDesc.SizeInBytes = bufferSize;
+
+    m_pDevice->CreateConstantBufferView(&cbvDesc, cbvHandle);
+}
+
 void D3DClass::executeCommandList(unsigned int count, ID3D12CommandList*const* lists)
 {
     m_pCommandQueue->ExecuteCommandLists(count, lists);

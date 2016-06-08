@@ -17,6 +17,11 @@ Pipeline::Pipeline() :
     m_pipelineDesc.SampleDesc.Count = 1;
 }
 
+Pipeline::~Pipeline()
+{
+    m_pPipelineState->Release();
+}
+
 void Pipeline::createPipeline(std::shared_ptr<ID3D12Device> device)
 {
     if (m_pPipelineState != nullptr)

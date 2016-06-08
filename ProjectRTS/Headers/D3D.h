@@ -40,9 +40,15 @@ public:
     std::shared_ptr<ID3D12Resource> createBufferFromData(unsigned char* data, unsigned long long size);
     std::shared_ptr<ID3D12GraphicsCommandList> createCommandList(std::shared_ptr<Pipeline> pipeline);
     void createRenderTarget(
-        unsigned int count, std::shared_ptr<ID3D12DescriptorHeap> &pRenderTargetViewHeap, 
+        unsigned int count, 
+        std::shared_ptr<ID3D12DescriptorHeap> &pRenderTargetViewHeap, 
         std::vector<std::shared_ptr<ID3D12Resource>> &renderTargetsArray, 
         std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> &renderTargetViewHandles);
+    void createConstantBuffer(
+        std::shared_ptr<ID3D12DescriptorHeap> &pConstantBufferViewHeap,
+        std::shared_ptr<ID3D12Resource> &pConstantBuffer,
+        unsigned int bufferSize,
+        D3D12_CPU_DESCRIPTOR_HANDLE &constantBufferViewHandle);
 
 	//void shutdown();
 

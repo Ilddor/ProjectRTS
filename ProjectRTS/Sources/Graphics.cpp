@@ -57,6 +57,30 @@ GraphicsClass::GraphicsClass(int screenHeight, int screenWidth, HWND hwnd)
     m_vertexBufferView.BufferLocation = m_pVertexBuffer->GetGPUVirtualAddress();
     m_vertexBufferView.StrideInBytes = sizeof(D3DClass::Vertex);
     m_vertexBufferView.SizeInBytes = vertexBufferSize;
+
+    m_projectionMatrix = DirectX::XMMatrixPerspectiveFovLH(120, screenHeight / screenWidth, 0.1f, 1000.f);
+    m_viewMatrix = DirectX::XMMatrixLookAtLH(DirectX::XMVectorSet(0.f, 0.f, -10.f, 0.f), DirectX::XMVectorSet(0.f, 0.f, 0.f, 0.f), DirectX::XMVectorSet(0.f, 1.f, 0.f, 0.f));
+    m_worldMatrix = DirectX::XMMatrixIdentity();
+
+    SVertexConstantBuffer buffer;
+    buffer.m_projectionMatrix = m_projectionMatrix;
+    buffer.m_viewMatrix = m_viewMatrix;
+    buffer.m_worldMatrix = m_worldMatrix;
+    m_pVertexConstantBuffer = m_pDirect3D->createBufferFromData(reinterpret_cast<unsigned char*>(&buffer), sizeof(buffer));
+    m_pDirect3D->createConstantBuffer(m_pConstantBufferViewHeap, m_pVertexConstantBuffer, sizeof(buffer), m_constantBufferViewHandle);
+}
+
+GraphicsClass::~GraphicsClass()
+{
+    m_pRenderTargetViewHeap->Release();
+    m_pCommandList->Release();
+    m_pVertexBuffer->Release();
+    for(auto it : m_backBufferRenderTargets)
+    {
+        it->Release();
+    }
+
+    m_pDirect3D->~D3DClass();
 }
 
 void GraphicsClass::recordCommandList()
