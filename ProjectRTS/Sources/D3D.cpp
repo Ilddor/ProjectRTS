@@ -185,8 +185,14 @@ D3DClass::D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, boo
 	// Initialize the starting fence value. 
 	m_fenceValue = 1;
 
+    CD3DX12_DESCRIPTOR_RANGE range;
+    CD3DX12_ROOT_PARAMETER parameter;
+
+    range.Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
+    parameter.InitAsDescriptorTable(1, &range, D3D12_SHADER_VISIBILITY_VERTEX);
+
     CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
-    rootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+    rootSignatureDesc.Init(1, &parameter, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
     ID3DBlob* signature;
     ID3DBlob* error;
@@ -321,24 +327,44 @@ void D3DClass::createConstantBuffer(
     std::shared_ptr<ID3D12DescriptorHeap> &pConstantBufferViewHeap,
     std::shared_ptr<ID3D12Resource> &pConstantBuffer,
     unsigned int bufferSize,
-    D3D12_CPU_DESCRIPTOR_HANDLE &constantBufferViewHandle)
+    D3D12_CPU_DESCRIPTOR_HANDLE &constantBufferViewHandle, 
+    unsigned char* pData,
+    unsigned long long size)
 {
     D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
     heapDesc.NumDescriptors = 1;
     heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
     heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 
+    ID3D12Resource* pBuffer = nullptr;
+
+    m_pDevice->CreateCommittedResource(
+        &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+        D3D12_HEAP_FLAG_NONE,
+        &CD3DX12_RESOURCE_DESC::Buffer(size),
+        D3D12_RESOURCE_STATE_GENERIC_READ,
+        nullptr,
+        IID_PPV_ARGS(&pBuffer));
+
+    pConstantBuffer = std::shared_ptr<ID3D12Resource>(pBuffer);
+
     ID3D12DescriptorHeap* constantBufferHeap = nullptr;
     m_pDevice->CreateDescriptorHeap(&heapDesc, __uuidof(ID3D12DescriptorHeap), (void**)(&constantBufferHeap));
     pConstantBufferViewHeap = std::shared_ptr<ID3D12DescriptorHeap>(constantBufferHeap);
+    CD3DX12_DESCRIPTOR_RANGE range;
 
-    CD3DX12_CPU_DESCRIPTOR_HANDLE cbvHandle(pConstantBufferViewHeap->GetCPUDescriptorHandleForHeapStart(), 0, 0);
 
     D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc;
     cbvDesc.BufferLocation = pConstantBuffer->GetGPUVirtualAddress();
     cbvDesc.SizeInBytes = bufferSize;
 
-    m_pDevice->CreateConstantBufferView(&cbvDesc, cbvHandle);
+    m_pDevice->CreateConstantBufferView(&cbvDesc, pConstantBufferViewHeap->GetCPUDescriptorHandleForHeapStart());
+
+    unsigned char* pDataBegin;
+    CD3DX12_RANGE readRange(0, 0);
+    pConstantBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pDataBegin));
+    memcpy(pDataBegin, pData, size);
+    pConstantBuffer->Unmap(0, nullptr);
 }
 
 void D3DClass::executeCommandList(unsigned int count, ID3D12CommandList*const* lists)

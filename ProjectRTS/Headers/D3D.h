@@ -48,7 +48,9 @@ public:
         std::shared_ptr<ID3D12DescriptorHeap> &pConstantBufferViewHeap,
         std::shared_ptr<ID3D12Resource> &pConstantBuffer,
         unsigned int bufferSize,
-        D3D12_CPU_DESCRIPTOR_HANDLE &constantBufferViewHandle);
+        D3D12_CPU_DESCRIPTOR_HANDLE &constantBufferViewHandle,
+        unsigned char* pData,
+        unsigned long long size);
 
 	//void shutdown();
 

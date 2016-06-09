@@ -6,7 +6,7 @@
 
 struct VertexOut
 {
-    float3 position  : POSITION;
+    float4 position  : POSITION;
     float4 color : COLOR;
 };
 
@@ -18,7 +18,7 @@ struct ConstantOutputType
 
 struct HullOutputType
 {
-    float3 position : POSITION;
+    float4 position : POSITION;
     float4 color : COLOR;
 };
 

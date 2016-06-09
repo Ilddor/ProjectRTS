@@ -58,7 +58,7 @@ GraphicsClass::GraphicsClass(int screenHeight, int screenWidth, HWND hwnd)
     m_vertexBufferView.StrideInBytes = sizeof(D3DClass::Vertex);
     m_vertexBufferView.SizeInBytes = vertexBufferSize;
 
-    m_projectionMatrix = DirectX::XMMatrixPerspectiveFovLH(120, screenHeight / screenWidth, 0.1f, 1000.f);
+    m_projectionMatrix = DirectX::XMMatrixPerspectiveFovLH(120, ((float)screenHeight) / ((float)screenWidth), 0.1f, 1000.f);
     m_viewMatrix = DirectX::XMMatrixLookAtLH(DirectX::XMVectorSet(0.f, 0.f, -10.f, 0.f), DirectX::XMVectorSet(0.f, 0.f, 0.f, 0.f), DirectX::XMVectorSet(0.f, 1.f, 0.f, 0.f));
     m_worldMatrix = DirectX::XMMatrixIdentity();
 
@@ -66,8 +66,8 @@ GraphicsClass::GraphicsClass(int screenHeight, int screenWidth, HWND hwnd)
     buffer.m_projectionMatrix = m_projectionMatrix;
     buffer.m_viewMatrix = m_viewMatrix;
     buffer.m_worldMatrix = m_worldMatrix;
-    m_pVertexConstantBuffer = m_pDirect3D->createBufferFromData(reinterpret_cast<unsigned char*>(&buffer), sizeof(buffer));
-    m_pDirect3D->createConstantBuffer(m_pConstantBufferViewHeap, m_pVertexConstantBuffer, sizeof(buffer), m_constantBufferViewHandle);
+    //m_pVertexConstantBuffer = m_pDirect3D->createBufferFromData(reinterpret_cast<unsigned char*>(&buffer), sizeof(buffer));
+    m_pDirect3D->createConstantBuffer(m_pConstantBufferViewHeap, m_pVertexConstantBuffer, sizeof(buffer), m_constantBufferViewHandle, reinterpret_cast<unsigned char*>(&buffer), sizeof(buffer));
 }
 
 GraphicsClass::~GraphicsClass()
@@ -90,6 +90,8 @@ void GraphicsClass::recordCommandList()
     m_pCommandList->SetGraphicsRootSignature(m_pDirect3D->getRootSignature().get());
     m_pCommandList->RSSetViewports(1, &m_viewport);
     m_pCommandList->RSSetScissorRects(1, &m_scissorRect);
+    ID3D12DescriptorHeap* ppHeaps[] = { m_pConstantBufferViewHeap.get() };
+    m_pCommandList->SetDescriptorHeaps(1, ppHeaps);
 
     // Record commands in the command list now.
     // Start by setting the resource barrier.

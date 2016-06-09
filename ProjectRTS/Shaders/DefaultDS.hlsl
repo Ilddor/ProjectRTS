@@ -6,7 +6,7 @@ struct ConstantOutputType
 
 struct HullOutputType
 {
-    float3 position : POSITION;
+    float4 position : POSITION;
     float4 color : COLOR;
 };
 
@@ -20,7 +20,7 @@ struct PixelInputType
 
 PixelInputType main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocation, const OutputPatch<HullOutputType, 3> patch)
 {
-    float3 vertexPosition;
+    float4 vertexPosition;
     PixelInputType output;
 
 
@@ -31,7 +31,7 @@ PixelInputType main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocatio
     /*output.position = mul(float4(vertexPosition, 1.0f), worldMatrix);
     output.position = mul(output.position, viewMatrix);
     output.position = mul(output.position, projectionMatrix);*/
-    output.position = float4(vertexPosition, 1.0f);
+    output.position = vertexPosition;
 
     // Send the input color into the pixel shader.
     /*float dist0 = distance(patch[0].position, vertexPosition);
