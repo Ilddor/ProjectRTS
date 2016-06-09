@@ -90,8 +90,7 @@ void GraphicsClass::recordCommandList()
     m_pCommandList->SetGraphicsRootSignature(m_pDirect3D->getRootSignature().get());
     m_pCommandList->RSSetViewports(1, &m_viewport);
     m_pCommandList->RSSetScissorRects(1, &m_scissorRect);
-    ID3D12DescriptorHeap* ppHeaps[] = { m_pConstantBufferViewHeap.get() };
-    m_pCommandList->SetDescriptorHeaps(1, ppHeaps);
+    m_pCommandList->SetGraphicsRootConstantBufferView(0, m_pVertexConstantBuffer->GetGPUVirtualAddress());
 
     // Record commands in the command list now.
     // Start by setting the resource barrier.

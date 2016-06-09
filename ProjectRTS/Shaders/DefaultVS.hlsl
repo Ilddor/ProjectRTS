@@ -19,11 +19,11 @@ VertexOut main(float3 position : POSITION, float4 color : COLOR)
 
     // Transform to homogeneous clip space.
     vout.position = float4(position, 1.f);
-    //vout.position = mul(vout.position, vpwBuffer.worldMatrix);
+    vout.position = mul(vout.position, mul(mul(vpwBuffer.viewMatrix, vpwBuffer.projectionMatrix), vpwBuffer.worldMatrix));
 
     // Just pass vertex color into the pixel shader.
-    //vout.color = color;
-    vout.color = vpwBuffer.color;
+    vout.color = color;
+    //vout.color = vpwBuffer.worldMatrix[0][0];
     //vout.color = float4(1.f, 0.f, 1.f, 1.f);
 
     return vout;
