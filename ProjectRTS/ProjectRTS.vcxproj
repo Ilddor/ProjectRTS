@@ -149,6 +149,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Headers\Camera.h" />
     <ClInclude Include="Headers\D3D.h" />
     <ClInclude Include="Headers\d3dx12.h" />
     <ClInclude Include="Headers\Graphics.h" />
@@ -157,6 +158,7 @@
     <ClInclude Include="Headers\SystemPlayground.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Sources\Camera.cpp" />
     <ClCompile Include="Sources\D3D.cpp" />
     <ClCompile Include="Sources\Graphics.cpp" />
     <ClCompile Include="Sources\Input.cpp" />

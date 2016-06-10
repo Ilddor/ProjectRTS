@@ -6,8 +6,7 @@ struct VertexOut
 
 struct ConstantBufferLayout
 {
-    row_major float4x4 viewMatrix;
-    row_major float4x4 projectionMatrix;
+    row_major float4x4 vpMatrix;
     row_major float4x4 worldMatrix;
 };
 
@@ -19,7 +18,7 @@ VertexOut main(float3 position : POSITION, float4 color : COLOR)
 
     // Transform to homogeneous clip space.
     vout.position = float4(position, 1.f);
-    vout.position = mul(vout.position, mul(mul(vpwBuffer.viewMatrix, vpwBuffer.projectionMatrix), vpwBuffer.worldMatrix));
+    vout.position = mul(vout.position, mul(vpwBuffer.vpMatrix, vpwBuffer.worldMatrix));
 
     // Just pass vertex color into the pixel shader.
     vout.color = color;

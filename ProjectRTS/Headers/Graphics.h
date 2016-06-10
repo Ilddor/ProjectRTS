@@ -5,6 +5,7 @@
 #include <DirectXMath.h>
 
 #include "D3D.h"
+#include "Camera.h"
 
 class GraphicsClass
 {
@@ -33,14 +34,13 @@ private:
 
     D3D12_VIEWPORT m_viewport;
     D3D12_RECT m_scissorRect;
-    DirectX::XMMATRIX m_viewMatrix;
-    DirectX::XMMATRIX m_projectionMatrix;
+
+    std::shared_ptr<Camera> m_pCamera;
     DirectX::XMMATRIX m_worldMatrix;
 
     struct SVertexConstantBuffer
     {
-        DirectX::XMMATRIX m_viewMatrix;
-        DirectX::XMMATRIX m_projectionMatrix;
+        DirectX::XMMATRIX m_vpMatrix;
         DirectX::XMMATRIX m_worldMatrix;
     };
     std::shared_ptr<ID3D12Resource>  m_pVertexConstantBuffer;
