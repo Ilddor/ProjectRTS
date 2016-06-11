@@ -36,6 +36,9 @@
     <ClInclude Include="Headers\Camera.h">
       <Filter>Headers</Filter>
     </ClInclude>
+    <ClInclude Include="Headers\GameObject.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Sources\D3D.cpp">
@@ -57,6 +60,9 @@
       <Filter>Sources</Filter>
     </ClCompile>
     <ClCompile Include="Sources\Camera.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="Sources\GameObject.cpp">
       <Filter>Sources</Filter>
     </ClCompile>
   </ItemGroup>

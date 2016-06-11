@@ -152,6 +152,7 @@
     <ClInclude Include="Headers\Camera.h" />
     <ClInclude Include="Headers\D3D.h" />
     <ClInclude Include="Headers\d3dx12.h" />
+    <ClInclude Include="Headers\GameObject.h" />
     <ClInclude Include="Headers\Graphics.h" />
     <ClInclude Include="Headers\Input.h" />
     <ClInclude Include="Headers\Pipeline.h" />
@@ -160,6 +161,7 @@
   <ItemGroup>
     <ClCompile Include="Sources\Camera.cpp" />
     <ClCompile Include="Sources\D3D.cpp" />
+    <ClCompile Include="Sources\GameObject.cpp" />
     <ClCompile Include="Sources\Graphics.cpp" />
     <ClCompile Include="Sources\Input.cpp" />
     <ClCompile Include="Sources\main.cpp" />

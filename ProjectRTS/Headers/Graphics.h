@@ -6,6 +6,7 @@
 
 #include "D3D.h"
 #include "Camera.h"
+#include "GameObject.h"
 
 class GraphicsClass
 {
@@ -22,7 +23,7 @@ public:
 private:
     void GraphicsClass::recordCommandList();
 
-    std::unique_ptr<D3DClass> m_pDirect3D;
+    std::shared_ptr<D3DClass> m_pDirect3D;
 
     std::shared_ptr<Pipeline> m_pPipeline;
     std::shared_ptr<ID3D12DescriptorHeap> m_pRenderTargetViewHeap;
@@ -31,6 +32,8 @@ private:
     std::shared_ptr<ID3D12GraphicsCommandList> m_pCommandList;
     std::shared_ptr<ID3D12Resource>  m_pVertexBuffer;
     D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
+
+    std::vector<std::shared_ptr<GameObject>> m_gameObjects;
 
     D3D12_VIEWPORT m_viewport;
     D3D12_RECT m_scissorRect;

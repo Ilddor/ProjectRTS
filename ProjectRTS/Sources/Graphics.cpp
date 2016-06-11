@@ -42,21 +42,7 @@ GraphicsClass::GraphicsClass(int screenHeight, int screenWidth, HWND hwnd)
     m_scissorRect.top = 0;
     m_scissorRect.bottom = screenHeight;
 
-    // Create vertex buffer
-    D3DClass::Vertex triangleVertices[] =
-    {
-        { { 0.0f, 0.5f, 0.f },{ 1.f, 0.f, 0.f, 1.f } },
-        { { 0.5f, -0.5f, 0.f },{ 0.f, 1.f, 0.f, 1.f } },
-        { { -0.5f, -0.5f, 0.f },{ 0.f, 0.f, 1.f, 1.f } },
-    };
-
-    const UINT vertexBufferSize = sizeof(triangleVertices);
-
-    m_pVertexBuffer = m_pDirect3D->createBufferFromData(reinterpret_cast<unsigned char*>(triangleVertices), vertexBufferSize);
-
-    m_vertexBufferView.BufferLocation = m_pVertexBuffer->GetGPUVirtualAddress();
-    m_vertexBufferView.StrideInBytes = sizeof(D3DClass::Vertex);
-    m_vertexBufferView.SizeInBytes = vertexBufferSize;
+    m_gameObjects.push_back(std::shared_ptr<GameObject>(new GameObject(m_pDirect3D)));
 
     m_pCamera = std::shared_ptr<Camera>(new Camera(DirectX::XMFLOAT3(0.f, 0.f, 0.f), screenWidth, screenHeight));
     m_worldMatrix = DirectX::XMMatrixIdentity();
@@ -64,7 +50,6 @@ GraphicsClass::GraphicsClass(int screenHeight, int screenWidth, HWND hwnd)
     SVertexConstantBuffer buffer;
     buffer.m_vpMatrix = m_pCamera->getVPMatrix();
     buffer.m_worldMatrix = m_worldMatrix;
-    //m_pVertexConstantBuffer = m_pDirect3D->createBufferFromData(reinterpret_cast<unsigned char*>(&buffer), sizeof(buffer));
     m_pDirect3D->createConstantBuffer(m_pConstantBufferViewHeap, m_pVertexConstantBuffer, sizeof(buffer), m_constantBufferViewHandle, reinterpret_cast<unsigned char*>(&buffer), sizeof(buffer));
 }
 
@@ -101,9 +86,10 @@ void GraphicsClass::recordCommandList()
     float color[4] = { 0.5, 0.5, 0.5, 1.0 };
     m_pCommandList->ClearRenderTargetView(m_renderTargetViewHandles[m_pDirect3D->getBackBufferIndex()], color, 0, nullptr);
 
-    m_pCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST);
-    m_pCommandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
-    m_pCommandList->DrawInstanced(3, 1, 0, 0);
+    for(auto it : m_gameObjects)
+    {
+        it->render(m_pCommandList);
+    }
 
     // Indicate that the back buffer will now be used to present.
     m_pCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_backBufferRenderTargets[m_pDirect3D->getBackBufferIndex()].get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
