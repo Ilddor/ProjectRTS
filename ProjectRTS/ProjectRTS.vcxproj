@@ -157,6 +157,7 @@
     <ClInclude Include="Headers\Input.h" />
     <ClInclude Include="Headers\Pipeline.h" />
     <ClInclude Include="Headers\SystemPlayground.h" />
+    <ClInclude Include="Headers\TerrainObject.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Sources\Camera.cpp" />
@@ -167,6 +168,7 @@
     <ClCompile Include="Sources\main.cpp" />
     <ClCompile Include="Sources\Pipeline.cpp" />
     <ClCompile Include="Sources\SystemPlayground.cpp" />
+    <ClCompile Include="Sources\TerrainObject.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\DefaultDS.hlsl">

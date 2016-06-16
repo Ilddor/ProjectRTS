@@ -39,6 +39,9 @@
     <ClInclude Include="Headers\GameObject.h">
       <Filter>Headers</Filter>
     </ClInclude>
+    <ClInclude Include="Headers\TerrainObject.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Sources\D3D.cpp">
@@ -63,6 +66,9 @@
       <Filter>Sources</Filter>
     </ClCompile>
     <ClCompile Include="Sources\GameObject.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="Sources\TerrainObject.cpp">
       <Filter>Sources</Filter>
     </ClCompile>
   </ItemGroup>

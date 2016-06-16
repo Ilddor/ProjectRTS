@@ -6,7 +6,7 @@ Pipeline::Pipeline() :
     m_pPipelineState( nullptr )
 {
     m_pipelineDesc = {};
-    m_pipelineDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT_WIREFRAME);
+    m_pipelineDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
     m_pipelineDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
     m_pipelineDesc.DepthStencilState.DepthEnable = false;
     m_pipelineDesc.DepthStencilState.StencilEnable = false;

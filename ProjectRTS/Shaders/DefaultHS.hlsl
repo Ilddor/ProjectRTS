@@ -28,12 +28,12 @@ ConstantOutputType ColorPatchConstantFunction(InputPatch<VertexOut, 3> inputPatc
 
 
     // Set the tessellation factors for the three edges of the triangle.
-    output.edges[0] = 4.f;
-    output.edges[1] = 4.f;
-    output.edges[2] = 4.f;
+    output.edges[0] = 1.f;
+    output.edges[1] = 1.f;
+    output.edges[2] = 1.f;
 
     // Set the tessellation factor for tessallating inside the triangle.
-    output.inside = 3.f;
+    output.inside = 1.f;
 
     return output;
 }

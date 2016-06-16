@@ -71,6 +71,27 @@ bool SystemClass::processFrame()
 		return false;
 	}
 
+    if(m_input->isKeyDown(VK_LEFT))
+    {
+        m_graphics->getCamera()->moveCamera(DirectX::XMFLOAT3(-0.01f, 0.f, 0.f));
+        m_graphics->updateVertexConstantBuffer();
+    }
+    if(m_input->isKeyDown(VK_RIGHT))
+    {
+        m_graphics->getCamera()->moveCamera(DirectX::XMFLOAT3(0.01f, 0.f, 0.f));
+        m_graphics->updateVertexConstantBuffer();
+    }
+    if(m_input->isKeyDown(VK_UP))
+    {
+        m_graphics->getCamera()->moveCamera(DirectX::XMFLOAT3(0.f, 0.f, 0.01f));
+        m_graphics->updateVertexConstantBuffer();
+    }
+    if(m_input->isKeyDown(VK_DOWN))
+    {
+        m_graphics->getCamera()->moveCamera(DirectX::XMFLOAT3(0.f, 0.f, -0.01f));
+        m_graphics->updateVertexConstantBuffer();
+    }
+
 	// Do the frame processing for the graphics object.
 	result = m_graphics->render();
 

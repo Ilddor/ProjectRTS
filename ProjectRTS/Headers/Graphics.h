@@ -15,6 +15,9 @@ public:
     ~GraphicsClass();
 	bool render();
 
+    std::shared_ptr<Camera> getCamera();
+    void updateVertexConstantBuffer();
+
     static const bool FULL_SCREEN = false;
     static const bool VSYNC_ENABLED = true;
     const float SCREEN_DEPTH = 1000.0f;

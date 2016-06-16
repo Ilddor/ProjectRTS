@@ -3,6 +3,7 @@
 #include <d3d12.h>
 #include <array>
 #include "d3dx12.h"
+#include "TerrainObject.h"
 
 GraphicsClass::GraphicsClass(int screenHeight, int screenWidth, HWND hwnd)
 	: m_pDirect3D(new D3DClass(screenHeight, screenWidth, hwnd, VSYNC_ENABLED, FULL_SCREEN))
@@ -42,7 +43,7 @@ GraphicsClass::GraphicsClass(int screenHeight, int screenWidth, HWND hwnd)
     m_scissorRect.top = 0;
     m_scissorRect.bottom = screenHeight;
 
-    m_gameObjects.push_back(std::shared_ptr<GameObject>(new GameObject(m_pDirect3D)));
+    m_gameObjects.push_back(std::shared_ptr<GameObject>(new TerrainObject(m_pDirect3D)));
 
     m_pCamera = std::shared_ptr<Camera>(new Camera(DirectX::XMFLOAT3(0.f, 0.f, 0.f), screenWidth, screenHeight));
     m_worldMatrix = DirectX::XMMatrixIdentity();
@@ -108,4 +109,22 @@ bool GraphicsClass::render()
     m_pDirect3D->presentBackBuffer();
 
 	return true;
+}
+
+std::shared_ptr<Camera> GraphicsClass::getCamera()
+{
+    return m_pCamera;
+}
+
+void GraphicsClass::updateVertexConstantBuffer()
+{
+    SVertexConstantBuffer buffer;
+    buffer.m_vpMatrix = m_pCamera->getVPMatrix();
+    buffer.m_worldMatrix = m_worldMatrix;
+    unsigned char* pDataBegin;
+    CD3DX12_RANGE readRange(0, 0);
+
+    m_pVertexConstantBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pDataBegin));
+    memcpy(pDataBegin, &buffer, sizeof(buffer));
+    m_pVertexConstantBuffer->Unmap(0, nullptr);
 }
