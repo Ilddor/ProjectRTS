@@ -71,24 +71,34 @@ bool SystemClass::processFrame()
 		return false;
 	}
 
-    if(m_input->isKeyDown(VK_LEFT))
+    if(m_input->isKeyDown(VK_LEFT) || m_input->isKeyDown('A'))
     {
-        m_graphics->getCamera()->moveCamera(DirectX::XMFLOAT3(-0.01f, 0.f, 0.f));
+        m_graphics->getCamera()->moveCamera(DirectX::XMFLOAT3(-0.1f, 0.f, 0.f));
         m_graphics->updateVertexConstantBuffer();
     }
-    if(m_input->isKeyDown(VK_RIGHT))
+    if(m_input->isKeyDown(VK_RIGHT) || m_input->isKeyDown('D'))
     {
-        m_graphics->getCamera()->moveCamera(DirectX::XMFLOAT3(0.01f, 0.f, 0.f));
+        m_graphics->getCamera()->moveCamera(DirectX::XMFLOAT3(0.1f, 0.f, 0.f));
         m_graphics->updateVertexConstantBuffer();
     }
-    if(m_input->isKeyDown(VK_UP))
+    if(m_input->isKeyDown(VK_UP) || m_input->isKeyDown('W'))
     {
-        m_graphics->getCamera()->moveCamera(DirectX::XMFLOAT3(0.f, 0.f, 0.01f));
+        m_graphics->getCamera()->moveCamera(DirectX::XMFLOAT3(0.f, 0.f, 0.1f));
         m_graphics->updateVertexConstantBuffer();
     }
-    if(m_input->isKeyDown(VK_DOWN))
+    if(m_input->isKeyDown(VK_DOWN) || m_input->isKeyDown('S'))
     {
-        m_graphics->getCamera()->moveCamera(DirectX::XMFLOAT3(0.f, 0.f, -0.01f));
+        m_graphics->getCamera()->moveCamera(DirectX::XMFLOAT3(0.f, 0.f, -0.1f));
+        m_graphics->updateVertexConstantBuffer();
+    }
+    if(m_input->isKeyDown('Q'))
+    {
+        m_graphics->getCamera()->ratateCamera(1.f);
+        m_graphics->updateVertexConstantBuffer();
+    }
+    if(m_input->isKeyDown('E'))
+    {
+        m_graphics->getCamera()->ratateCamera(-1.f);
         m_graphics->updateVertexConstantBuffer();
     }
 

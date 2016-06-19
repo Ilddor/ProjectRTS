@@ -9,6 +9,7 @@ public:
 
     void setPosition(DirectX::XMFLOAT3 newPosition);
     void moveCamera(DirectX::XMFLOAT3 offset);
+    void ratateCamera(float angleDegrees);
     DirectX::XMMATRIX getVPMatrix();
 private:
     void recalculateView();
@@ -16,7 +17,7 @@ private:
     DirectX::XMMATRIX m_viewMatrix;
     DirectX::XMMATRIX m_projectionMatrix;
 
-    DirectX::XMVECTOR m_cameraPosition;
+    float m_angle;
     DirectX::XMVECTOR m_cameraTarget;
     DirectX::XMVECTOR m_upVector;
 };
