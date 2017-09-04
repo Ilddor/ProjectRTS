@@ -16,6 +16,7 @@ public:
 	bool render();
 
     std::shared_ptr<Camera> getCamera();
+    std::shared_ptr<ID3D12DescriptorHeap> getSRVHeap();
     void updateVertexConstantBuffer();
 
     static const bool FULL_SCREEN = false;

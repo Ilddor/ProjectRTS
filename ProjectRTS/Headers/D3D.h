@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "Pipeline.h"
+#include "d3dx12.h"
 
 class D3DClass
 {
@@ -51,6 +52,10 @@ public:
         D3D12_CPU_DESCRIPTOR_HANDLE &constantBufferViewHandle,
         unsigned char* pData,
         unsigned long long size);
+    void createTexture(
+        std::shared_ptr<ID3D12DescriptorHeap> &pSRVHeap,
+        CD3DX12_RESOURCE_DESC &texDesc,
+        std::shared_ptr<ID3D12Resource> texture);
 
 	//void shutdown();
 

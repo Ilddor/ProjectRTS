@@ -43,8 +43,6 @@ GraphicsClass::GraphicsClass(int screenHeight, int screenWidth, HWND hwnd)
     m_scissorRect.top = 0;
     m_scissorRect.bottom = screenHeight;
 
-    m_gameObjects.push_back(std::shared_ptr<GameObject>(new TerrainObject(m_pDirect3D)));
-
     m_pCamera = std::shared_ptr<Camera>(new Camera(DirectX::XMFLOAT3(0.f, 0.f, 0.f), screenWidth, screenHeight));
     m_worldMatrix = DirectX::XMMatrixIdentity();
 
@@ -52,13 +50,14 @@ GraphicsClass::GraphicsClass(int screenHeight, int screenWidth, HWND hwnd)
     buffer.m_vpMatrix = m_pCamera->getVPMatrix();
     buffer.m_worldMatrix = m_worldMatrix;
     m_pDirect3D->createConstantBuffer(m_pConstantBufferViewHeap, m_pVertexConstantBuffer, sizeof(buffer), m_constantBufferViewHandle, reinterpret_cast<unsigned char*>(&buffer), sizeof(buffer));
+
+    m_gameObjects.push_back(std::shared_ptr<GameObject>(new TerrainObject(m_pDirect3D, m_pConstantBufferViewHeap)));
 }
 
 GraphicsClass::~GraphicsClass()
 {
     m_pRenderTargetViewHeap->Release();
     m_pCommandList->Release();
-    m_pVertexBuffer->Release();
     for(auto it : m_backBufferRenderTargets)
     {
         it->Release();
@@ -69,12 +68,16 @@ GraphicsClass::~GraphicsClass()
 
 void GraphicsClass::recordCommandList()
 {
+	m_pDirect3D->getCommandAllocator().get()->Reset();
     m_pCommandList->Reset(m_pDirect3D->getCommandAllocator().get(), m_pPipeline->getPipelineState().get());
 
     m_pCommandList->SetGraphicsRootSignature(m_pDirect3D->getRootSignature().get());
     m_pCommandList->RSSetViewports(1, &m_viewport);
     m_pCommandList->RSSetScissorRects(1, &m_scissorRect);
-    m_pCommandList->SetGraphicsRootConstantBufferView(0, m_pVertexConstantBuffer->GetGPUVirtualAddress());
+    //m_pCommandList->SetGraphicsRootConstantBufferView(0, m_pVertexConstantBuffer->GetGPUVirtualAddress());
+    std::array<ID3D12DescriptorHeap*, 1> pDescHeaps = { m_pConstantBufferViewHeap.get() };
+    m_pCommandList->SetDescriptorHeaps(1, pDescHeaps.data());
+	m_pCommandList->SetGraphicsRootDescriptorTable(0, m_pConstantBufferViewHeap->GetGPUDescriptorHandleForHeapStart());
 
     // Record commands in the command list now.
     // Start by setting the resource barrier.
@@ -103,8 +106,10 @@ bool GraphicsClass::render()
 {
 	// Render the graphics scene.
     recordCommandList();
-    std::array<ID3D12CommandList*, 1> pCommandLists = { m_pCommandList.get() };
-    m_pDirect3D->executeCommandList(1, pCommandLists.data());
+    //std::array<ID3D12CommandList*, 1> pCommandLists = { m_pCommandList.get() };
+	ID3D12CommandList* ppCommandLists[1];
+	ppCommandLists[0] = m_pCommandList.get();
+    m_pDirect3D->executeCommandList(1, ppCommandLists);
 
     m_pDirect3D->presentBackBuffer();
 
@@ -114,6 +119,11 @@ bool GraphicsClass::render()
 std::shared_ptr<Camera> GraphicsClass::getCamera()
 {
     return m_pCamera;
+}
+
+std::shared_ptr<ID3D12DescriptorHeap> GraphicsClass::getSRVHeap()
+{
+    return m_pConstantBufferViewHeap;
 }
 
 void GraphicsClass::updateVertexConstantBuffer()

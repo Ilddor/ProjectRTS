@@ -29,6 +29,8 @@ void Pipeline::createPipeline(std::shared_ptr<ID3D12Device> device)
 
     ID3D12PipelineState* state = nullptr;
     HRESULT result = device->CreateGraphicsPipelineState(&m_pipelineDesc, IID_PPV_ARGS(&state));
+	if(result != S_OK)
+		throw "Could not create Pipeline state";
     m_pPipelineState = std::shared_ptr<ID3D12PipelineState>(state);
 }
 

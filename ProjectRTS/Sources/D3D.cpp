@@ -188,16 +188,17 @@ D3DClass::D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, boo
     CD3DX12_DESCRIPTOR_RANGE range;
     CD3DX12_ROOT_PARAMETER parameter;
 
-    range.Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
+    range.Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
     parameter.InitAsDescriptorTable(1, &range, D3D12_SHADER_VISIBILITY_VERTEX);
 
     CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
     rootSignatureDesc.Init(1, &parameter, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+	//rootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
     ID3DBlob* signature;
     ID3DBlob* error;
 
-    D3D12SerializeRootSignature(
+	result = D3D12SerializeRootSignature(
         &rootSignatureDesc, 
         D3D_ROOT_SIGNATURE_VERSION_1, 
         &signature, 
@@ -205,7 +206,7 @@ D3DClass::D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, boo
 
     ID3D12RootSignature* rootSignature;
 
-    m_pDevice->CreateRootSignature(
+	result = m_pDevice->CreateRootSignature(
         0, 
         signature->GetBufferPointer(), 
         signature->GetBufferSize(), 
@@ -349,22 +350,66 @@ void D3DClass::createConstantBuffer(
     pConstantBuffer = std::shared_ptr<ID3D12Resource>(pBuffer);
 
     ID3D12DescriptorHeap* constantBufferHeap = nullptr;
-    m_pDevice->CreateDescriptorHeap(&heapDesc, __uuidof(ID3D12DescriptorHeap), (void**)(&constantBufferHeap));
+    HRESULT result = m_pDevice->CreateDescriptorHeap(&heapDesc, __uuidof(ID3D12DescriptorHeap), (void**)(&constantBufferHeap));
     pConstantBufferViewHeap = std::shared_ptr<ID3D12DescriptorHeap>(constantBufferHeap);
     CD3DX12_DESCRIPTOR_RANGE range;
 
 
-    D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc;
+    D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
     cbvDesc.BufferLocation = pConstantBuffer->GetGPUVirtualAddress();
-    cbvDesc.SizeInBytes = bufferSize;
+    cbvDesc.SizeInBytes = (bufferSize + 255) & ~255;
 
-    m_pDevice->CreateConstantBufferView(&cbvDesc, pConstantBufferViewHeap->GetCPUDescriptorHandleForHeapStart());
+	m_pDevice->CreateConstantBufferView(&cbvDesc, pConstantBufferViewHeap->GetCPUDescriptorHandleForHeapStart());
 
     unsigned char* pDataBegin;
     CD3DX12_RANGE readRange(0, 0);
     pConstantBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pDataBegin));
     memcpy(pDataBegin, pData, size);
     pConstantBuffer->Unmap(0, nullptr);
+}
+
+void D3DClass::createTexture(
+    std::shared_ptr<ID3D12DescriptorHeap> &pSRVHeap,
+    CD3DX12_RESOURCE_DESC &texDesc,
+    std::shared_ptr<ID3D12Resource> texture)
+{
+    ID3D12Resource* pTexture = nullptr;
+
+    m_pDevice->CreateCommittedResource(
+        &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+        D3D12_HEAP_FLAG_NONE,
+        &texDesc,
+        D3D12_RESOURCE_STATE_COMMON,
+        nullptr,
+        IID_PPV_ARGS(&pTexture));
+    texture = std::shared_ptr<ID3D12Resource>(pTexture);
+
+    /*D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+    srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    srvDesc.Format = texDesc.Format;
+    srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+    srvDesc.Texture2D.MipLevels = texDesc.MipLevels;
+    srvDesc.Texture2D.MostDetailedMip = 0;
+    srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+
+    /*D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
+    heapDesc.NumDescriptors = 1;
+    heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+    heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+
+    ID3D12DescriptorHeap* srvHeap = nullptr;
+    m_pDevice->CreateDescriptorHeap(&heapDesc, __uuidof(ID3D12DescriptorHeap), (void**)(&srvHeap));
+    pSRVHeap = std::shared_ptr<ID3D12DescriptorHeap>(srvHeap);*/
+
+    /*CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle(pSRVHeap->GetCPUDescriptorHandleForHeapStart(), m_pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+
+    m_pDevice->CreateShaderResourceView(pTexture, &srvDesc, cpuHandle);
+
+    unsigned char* pDataBegin;
+    CD3DX12_RANGE readRange(0, 0);
+    texture->Map(0, &readRange, reinterpret_cast<void**>(&pDataBegin));
+    //memcpy(pDataBegin, pData, size);
+    texture->Unmap(0, nullptr);*/
 }
 
 void D3DClass::executeCommandList(unsigned int count, ID3D12CommandList*const* lists)
