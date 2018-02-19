@@ -49,11 +49,9 @@ GraphicsClass::GraphicsClass(int screenHeight, int screenWidth, HWND hwnd)
     SVertexConstantBuffer buffer;
     buffer.m_vpMatrix = m_pCamera->getVPMatrix();
     buffer.m_worldMatrix = m_worldMatrix;
-    auto [constantBufferViewHeap, vertexConstantBuffer] = m_pDirect3D->createConstantBuffer(
+    std::tie(m_pConstantBufferViewHeap, m_pVertexConstantBuffer) = m_pDirect3D->createConstantBuffer(
 		sizeof(buffer),
 		reinterpret_cast<unsigned char*>(&buffer));
-	m_pConstantBufferViewHeap = std::move(constantBufferViewHeap);
-	m_pVertexConstantBuffer = std::move(vertexConstantBuffer);
 
     m_gameObjects.push_back(std::unique_ptr<GameObject>(new TerrainObject(m_pDirect3D.get(), m_pConstantBufferViewHeap.get())));
 }
