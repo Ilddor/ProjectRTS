@@ -16,6 +16,9 @@
 class D3DClass
 {
 public:
+	using D3D12ConstantBuffer = std::tuple<
+		std::unique_ptr<ID3D12DescriptorHeap>,
+		std::unique_ptr<ID3D12Resource>>;
     struct Float3
     {
         float x;
@@ -38,48 +41,43 @@ public:
     D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, bool fullscreen);
     ~D3DClass();
 
-    std::shared_ptr<ID3D12Resource> createBufferFromData(unsigned char* data, unsigned long long size);
-    std::shared_ptr<ID3D12GraphicsCommandList> createCommandList(std::shared_ptr<Pipeline> pipeline);
-    void createRenderTarget(
-        unsigned int count, 
-        std::shared_ptr<ID3D12DescriptorHeap> &pRenderTargetViewHeap, 
-        std::vector<std::shared_ptr<ID3D12Resource>> &renderTargetsArray, 
+    std::unique_ptr<ID3D12Resource> createBufferFromData(const unsigned char* data, unsigned long long size);
+    std::unique_ptr<ID3D12GraphicsCommandList> createCommandList(const Pipeline* pipeline);
+    std::unique_ptr<ID3D12DescriptorHeap>  createRenderTarget(
+        unsigned int count,
+        std::vector<std::unique_ptr<ID3D12Resource>> &renderTargetsArray,
         std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> &renderTargetViewHandles);
-    void createConstantBuffer(
-        std::shared_ptr<ID3D12DescriptorHeap> &pConstantBufferViewHeap,
-        std::shared_ptr<ID3D12Resource> &pConstantBuffer,
+	D3D12ConstantBuffer createConstantBuffer(
         unsigned int bufferSize,
-        D3D12_CPU_DESCRIPTOR_HANDLE &constantBufferViewHandle,
-        unsigned char* pData,
-        unsigned long long size);
+        unsigned char* pData);
     void createTexture(
-        std::shared_ptr<ID3D12DescriptorHeap> &pSRVHeap,
+        std::unique_ptr<ID3D12DescriptorHeap> &pSRVHeap,
         CD3DX12_RESOURCE_DESC &texDesc,
-        std::shared_ptr<ID3D12Resource> texture);
+        std::unique_ptr<ID3D12Resource> &texture);
 
 	//void shutdown();
 
     void executeCommandList(unsigned int count, ID3D12CommandList*const* lists);
     void presentBackBuffer();
 
-    std::shared_ptr<ID3D12Device> getDevice();
-    std::shared_ptr<ID3D12RootSignature> getRootSignature();
-    std::shared_ptr<ID3D12CommandAllocator> getCommandAllocator();
+    ID3D12Device* getDevice();
+    ID3D12RootSignature* getRootSignature();
+    ID3D12CommandAllocator* getCommandAllocator();
 
     unsigned int getBackBufferIndex();
 private:
 
 	bool m_vsync_enabled;
-	std::shared_ptr<ID3D12Device> m_pDevice;
-    std::shared_ptr<ID3D12CommandQueue> m_pCommandQueue;
+	std::unique_ptr<ID3D12Device> m_pDevice;
+    std::unique_ptr<ID3D12CommandQueue> m_pCommandQueue;
 	char m_videoCardDescription[128];
-    std::shared_ptr<IDXGISwapChain3> m_pSwapChain;
+    std::unique_ptr<IDXGISwapChain3> m_pSwapChain;
 	unsigned int m_backBufferIndex;
     unsigned int m_backBuffersCount;
 	unsigned int m_videoCardMemory;
-    std::shared_ptr<ID3D12CommandAllocator> m_pCommandAllocator;
-    std::shared_ptr<ID3D12Fence> m_pFence;
+    std::unique_ptr<ID3D12CommandAllocator> m_pCommandAllocator;
+    std::unique_ptr<ID3D12Fence> m_pFence;
 	HANDLE m_fenceEvent;
 	unsigned long long m_fenceValue;
-    std::shared_ptr<ID3D12RootSignature> m_pRootSignature;
+    std::unique_ptr<ID3D12RootSignature> m_pRootSignature;
 };

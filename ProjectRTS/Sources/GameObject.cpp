@@ -2,10 +2,10 @@
 
 #include <array>
 
-GameObject::GameObject(std::shared_ptr<D3DClass> direct3D)
+GameObject::GameObject(const D3DClass* direct3D)
 {
 }
 
-void GameObject::render(std::shared_ptr<ID3D12GraphicsCommandList> commandList)
+void GameObject::render(ID3D12GraphicsCommandList* commandList)
 {
 }

@@ -3,7 +3,7 @@
 #include <array>
 #include "d3dx12.h"
 
-TerrainObject::TerrainObject(std::shared_ptr<D3DClass> direct3D, std::shared_ptr<ID3D12DescriptorHeap> pSRVHeap) :
+TerrainObject::TerrainObject(D3DClass* direct3D, ID3D12DescriptorHeap* pSRVHeap) :
     GameObject(direct3D)
 {
     // Create vertex buffer
@@ -37,7 +37,7 @@ TerrainObject::TerrainObject(std::shared_ptr<D3DClass> direct3D, std::shared_ptr
     //direct3D->createTexture(pSRVHeap, textureDesc, m_pTexture);
 }
 
-void TerrainObject::render(std::shared_ptr<ID3D12GraphicsCommandList> commandList)
+void TerrainObject::render(ID3D12GraphicsCommandList* commandList)
 {
     //commandList->SetGraphicsRootShaderResourceView(0, m_pTexture->GetGPUVirtualAddress());
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST);

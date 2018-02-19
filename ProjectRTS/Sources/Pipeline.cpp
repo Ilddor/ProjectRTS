@@ -22,7 +22,7 @@ Pipeline::~Pipeline()
     m_pPipelineState->Release();
 }
 
-void Pipeline::createPipeline(std::shared_ptr<ID3D12Device> device)
+void Pipeline::createPipeline(ID3D12Device* device)
 {
     if (m_pPipelineState != nullptr)
         m_pPipelineState->Release();
@@ -31,7 +31,7 @@ void Pipeline::createPipeline(std::shared_ptr<ID3D12Device> device)
     HRESULT result = device->CreateGraphicsPipelineState(&m_pipelineDesc, IID_PPV_ARGS(&state));
 	if(result != S_OK)
 		throw "Could not create Pipeline state";
-    m_pPipelineState = std::shared_ptr<ID3D12PipelineState>(state);
+    m_pPipelineState = std::unique_ptr<ID3D12PipelineState>(state);
 }
 
 void Pipeline::setInputLayout(D3D12_INPUT_LAYOUT_DESC layout)
@@ -44,8 +44,7 @@ void Pipeline::loadShader(ShaderType type, std::wstring path)
     ID3DBlob* shader;
 
     D3DReadFileToBlob(path.data(), &shader);
-    if(m_shadersMap.find(type) != m_shadersMap.end())
-        m_shadersMap.erase(type);
+    m_shadersMap.erase(type);
 
     m_shadersMap.insert(std::pair<ShaderType, std::shared_ptr<ID3DBlob>>(type, std::shared_ptr<ID3DBlob>(shader)));
     
@@ -66,12 +65,12 @@ void Pipeline::loadShader(ShaderType type, std::wstring path)
     }
 }
 
-void Pipeline::setRootSignature(std::shared_ptr<ID3D12RootSignature> rootSignature)
+void Pipeline::setRootSignature(ID3D12RootSignature* rootSignature)
 {
-    m_pipelineDesc.pRootSignature = rootSignature.get();
+    m_pipelineDesc.pRootSignature = rootSignature;
 }
 
-std::shared_ptr<ID3D12PipelineState> Pipeline::getPipelineState()
+ID3D12PipelineState* Pipeline::getPipelineState() const
 {
-    return m_pPipelineState;
+    return m_pPipelineState.get();
 }

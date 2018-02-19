@@ -4,6 +4,7 @@
 #include <array>
 #include <fstream>
 #include <stdlib.h>
+#include <exception>
 
 D3DClass::D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, bool fullscreen)
 {
@@ -31,10 +32,10 @@ D3DClass::D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, boo
 	// Create the Direct3D 12 device.
     ID3D12Device* device;
 	result = D3D12CreateDevice(NULL, featureLevel, __uuidof(ID3D12Device), (void**)&device);
-    m_pDevice = std::shared_ptr<ID3D12Device>(device);
+    m_pDevice = std::unique_ptr<ID3D12Device>(device);
 	if(FAILED(result))
 	{
-		MessageBox(hwnd, L"Could not create a DirectX 12.1 device.  The default video card does not support DirectX 12.1.", L"DirectX Device Failure", MB_OK);
+		throw "Could not create a DirectX 12.1 device.The default video card does not support DirectX 12.1.";
 	}
 
 	// Initialize the description of the command queue.
@@ -49,7 +50,7 @@ D3DClass::D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, boo
 	// Create the command queue.
     ID3D12CommandQueue* commandQueue = nullptr;
     m_pDevice->CreateCommandQueue(&commandQueueDesc, __uuidof(ID3D12CommandQueue), (void**)&commandQueue);
-    m_pCommandQueue = std::shared_ptr<ID3D12CommandQueue>(commandQueue);
+    m_pCommandQueue = std::unique_ptr<ID3D12CommandQueue>(commandQueue);
 
 	// Create a DirectX graphics interface factory.
 	CreateDXGIFactory1(__uuidof(IDXGIFactory4), (void**)&factory);
@@ -160,7 +161,7 @@ D3DClass::D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, boo
 	// This will allow us to use the newer functionality such as getting the current back buffer index.
     IDXGISwapChain3* swapChain3 = nullptr;
 	swapChain->QueryInterface(__uuidof(IDXGISwapChain3), (void**)&swapChain3);
-    m_pSwapChain = std::shared_ptr<IDXGISwapChain3>(swapChain3);
+    m_pSwapChain = std::unique_ptr<IDXGISwapChain3>(swapChain3);
 
 	// Clear pointer to original swap chain interface since we are using version 3 instead (m_swapChain).
 	swapChain = nullptr;
@@ -172,12 +173,12 @@ D3DClass::D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, boo
 	// Create a command allocator.
     ID3D12CommandAllocator* pCommandAllocator = nullptr;
     m_pDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void**)&pCommandAllocator);
-    m_pCommandAllocator = std::shared_ptr<ID3D12CommandAllocator>(pCommandAllocator);
+    m_pCommandAllocator = std::unique_ptr<ID3D12CommandAllocator>(pCommandAllocator);
 
 	// Create a fence for GPU synchronization.
     ID3D12Fence* fence = nullptr;
     m_pDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(ID3D12Fence), (void**)&fence);
-    m_pFence = std::shared_ptr<ID3D12Fence>(fence);
+    m_pFence = std::unique_ptr<ID3D12Fence>(fence);
 
 	// Create an event object for the fence.
 	m_fenceEvent = CreateEvent(nullptr, false, false, nullptr);
@@ -203,6 +204,10 @@ D3DClass::D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, boo
         D3D_ROOT_SIGNATURE_VERSION_1, 
         &signature, 
         &error);
+	if (FAILED(result))
+	{
+		throw "Could not serialize root signature.";
+	}
 
     ID3D12RootSignature* rootSignature;
 
@@ -211,8 +216,12 @@ D3DClass::D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, boo
         signature->GetBufferPointer(), 
         signature->GetBufferSize(), 
         IID_PPV_ARGS(&rootSignature));
+	if (FAILED(result))
+	{
+		throw "Could not create root signature.";
+	}
 
-    m_pRootSignature = std::shared_ptr<ID3D12RootSignature>(rootSignature);
+    m_pRootSignature = std::unique_ptr<ID3D12RootSignature>(rootSignature);
 
     unsigned long long fenceToWaitFor = m_fenceValue;
     m_pCommandQueue->Signal(m_pFence.get(), fenceToWaitFor);
@@ -224,6 +233,9 @@ D3DClass::D3DClass(int screenHeight, int screenWidth, HWND hwnd, bool vsync, boo
         m_pFence->SetEventOnCompletion(fenceToWaitFor, m_fenceEvent);
         WaitForSingleObject(m_fenceEvent, INFINITE);
     }
+
+	m_backBufferIndex = 0;
+	m_backBuffersCount = 0;
 }
 
 D3DClass::~D3DClass()
@@ -245,7 +257,7 @@ D3DClass::~D3DClass()
     m_pDevice->Release();
 }
 
-std::shared_ptr<ID3D12Resource> D3DClass::createBufferFromData(unsigned char* pData, unsigned long long size)
+std::unique_ptr<ID3D12Resource> D3DClass::createBufferFromData(const unsigned char* pData, unsigned long long size)
 {
     ID3D12Resource* pBuffer = nullptr;
 
@@ -263,10 +275,10 @@ std::shared_ptr<ID3D12Resource> D3DClass::createBufferFromData(unsigned char* pD
     memcpy(pDataBegin, pData, size);
     pBuffer->Unmap(0, nullptr);
 
-    return std::shared_ptr<ID3D12Resource>(pBuffer);
+    return std::unique_ptr<ID3D12Resource>(pBuffer);
 }
 
-std::shared_ptr<ID3D12GraphicsCommandList> D3DClass::createCommandList(std::shared_ptr<Pipeline> pPipeline)
+std::unique_ptr<ID3D12GraphicsCommandList> D3DClass::createCommandList(const Pipeline* pPipeline)
 {
     ID3D12GraphicsCommandList* pCommandList = nullptr;
 
@@ -274,16 +286,15 @@ std::shared_ptr<ID3D12GraphicsCommandList> D3DClass::createCommandList(std::shar
         0,
         D3D12_COMMAND_LIST_TYPE_DIRECT,
         m_pCommandAllocator.get(),
-        pPipeline->getPipelineState().get(),
+        pPipeline->getPipelineState(),
         IID_PPV_ARGS(&pCommandList));
 
-    return std::shared_ptr<ID3D12GraphicsCommandList>(pCommandList);
+    return std::unique_ptr<ID3D12GraphicsCommandList>(pCommandList);
 }
 
-void D3DClass::createRenderTarget(
+std::unique_ptr<ID3D12DescriptorHeap> D3DClass::createRenderTarget(
     unsigned int                                    count, 
-    std::shared_ptr<ID3D12DescriptorHeap>           &pRenderTargetViewHeap,
-    std::vector<std::shared_ptr<ID3D12Resource>>    &renderTargetsArray,
+    std::vector<std::unique_ptr<ID3D12Resource>>    &renderTargetsArray,
     std::vector<D3D12_CPU_DESCRIPTOR_HANDLE>        &renderTargetViewHandles)
 {
     D3D12_DESCRIPTOR_HEAP_DESC renderTargetViewHeapDesc = {};
@@ -299,10 +310,9 @@ void D3DClass::createRenderTarget(
     // Create the render target view heap for the back buffers.
     ID3D12DescriptorHeap* renderTargetViewHeap = nullptr;
     m_pDevice->CreateDescriptorHeap(&renderTargetViewHeapDesc, __uuidof(ID3D12DescriptorHeap), (void**)&renderTargetViewHeap);
-    pRenderTargetViewHeap = std::shared_ptr<ID3D12DescriptorHeap>(renderTargetViewHeap);
 
     // Get a handle to the starting memory location in the render target view heap to identify where the render target views will be located for the two back buffers.
-    renderTargetViewHandle = pRenderTargetViewHeap->GetCPUDescriptorHandleForHeapStart();
+    renderTargetViewHandle = renderTargetViewHeap->GetCPUDescriptorHandleForHeapStart();
     ID3D12Resource* renderTarget = nullptr;
 
     for(unsigned int i = 0; i < count; ++i)
@@ -312,7 +322,7 @@ void D3DClass::createRenderTarget(
 
         // Create a render target view for the first back buffer.
         m_pDevice->CreateRenderTargetView(renderTarget, NULL, renderTargetViewHandle);
-        renderTargetsArray.push_back(std::shared_ptr<ID3D12Resource>(renderTarget));
+        renderTargetsArray.push_back(std::unique_ptr<ID3D12Resource>(renderTarget));
         renderTargetViewHandles.push_back(renderTargetViewHandle);
 
         renderTarget = nullptr;
@@ -322,15 +332,13 @@ void D3DClass::createRenderTarget(
 
     // Finally get the initial index to which buffer is the current back buffer.
     m_backBufferIndex = m_pSwapChain->GetCurrentBackBufferIndex();
+
+	return std::unique_ptr<ID3D12DescriptorHeap>(renderTargetViewHeap);
 }
 
-void D3DClass::createConstantBuffer(
-    std::shared_ptr<ID3D12DescriptorHeap> &pConstantBufferViewHeap,
-    std::shared_ptr<ID3D12Resource> &pConstantBuffer,
+D3DClass::D3D12ConstantBuffer D3DClass::createConstantBuffer(
     unsigned int bufferSize,
-    D3D12_CPU_DESCRIPTOR_HANDLE &constantBufferViewHandle, 
-    unsigned char* pData,
-    unsigned long long size)
+    unsigned char* pData)
 {
     D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
     heapDesc.NumDescriptors = 1;
@@ -342,36 +350,39 @@ void D3DClass::createConstantBuffer(
     m_pDevice->CreateCommittedResource(
         &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
         D3D12_HEAP_FLAG_NONE,
-        &CD3DX12_RESOURCE_DESC::Buffer(size),
+        &CD3DX12_RESOURCE_DESC::Buffer(bufferSize),
         D3D12_RESOURCE_STATE_GENERIC_READ,
         nullptr,
         IID_PPV_ARGS(&pBuffer));
 
-    pConstantBuffer = std::shared_ptr<ID3D12Resource>(pBuffer);
-
     ID3D12DescriptorHeap* constantBufferHeap = nullptr;
     HRESULT result = m_pDevice->CreateDescriptorHeap(&heapDesc, __uuidof(ID3D12DescriptorHeap), (void**)(&constantBufferHeap));
-    pConstantBufferViewHeap = std::shared_ptr<ID3D12DescriptorHeap>(constantBufferHeap);
+	if (FAILED(result))
+	{
+		throw "Could not create description heap for constant buffer";
+	}
     CD3DX12_DESCRIPTOR_RANGE range;
 
 
     D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
-    cbvDesc.BufferLocation = pConstantBuffer->GetGPUVirtualAddress();
+    cbvDesc.BufferLocation = pBuffer->GetGPUVirtualAddress();
     cbvDesc.SizeInBytes = (bufferSize + 255) & ~255;
 
-	m_pDevice->CreateConstantBufferView(&cbvDesc, pConstantBufferViewHeap->GetCPUDescriptorHandleForHeapStart());
+	m_pDevice->CreateConstantBufferView(&cbvDesc, constantBufferHeap->GetCPUDescriptorHandleForHeapStart());
 
     unsigned char* pDataBegin;
     CD3DX12_RANGE readRange(0, 0);
-    pConstantBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pDataBegin));
-    memcpy(pDataBegin, pData, size);
-    pConstantBuffer->Unmap(0, nullptr);
+	pBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pDataBegin));
+    memcpy(pDataBegin, pData, bufferSize);
+	pBuffer->Unmap(0, nullptr);
+
+	return D3DClass::D3D12ConstantBuffer(std::unique_ptr<ID3D12DescriptorHeap>(constantBufferHeap), std::unique_ptr<ID3D12Resource>(pBuffer));
 }
 
 void D3DClass::createTexture(
-    std::shared_ptr<ID3D12DescriptorHeap> &pSRVHeap,
+    std::unique_ptr<ID3D12DescriptorHeap> &pSRVHeap,
     CD3DX12_RESOURCE_DESC &texDesc,
-    std::shared_ptr<ID3D12Resource> texture)
+    std::unique_ptr<ID3D12Resource> &texture)
 {
     ID3D12Resource* pTexture = nullptr;
 
@@ -382,7 +393,7 @@ void D3DClass::createTexture(
         D3D12_RESOURCE_STATE_COMMON,
         nullptr,
         IID_PPV_ARGS(&pTexture));
-    texture = std::shared_ptr<ID3D12Resource>(pTexture);
+    texture = std::unique_ptr<ID3D12Resource>(pTexture);
 
     /*D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
     srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -441,19 +452,19 @@ void D3DClass::presentBackBuffer()
         m_backBufferIndex = 0;
 }
 
-std::shared_ptr<ID3D12Device> D3DClass::getDevice()
+ID3D12Device* D3DClass::getDevice()
 {
-    return m_pDevice;
+    return m_pDevice.get();
 }
 
-std::shared_ptr<ID3D12RootSignature> D3DClass::getRootSignature()
+ID3D12RootSignature* D3DClass::getRootSignature()
 {
-    return m_pRootSignature;
+    return m_pRootSignature.get();
 }
 
-std::shared_ptr<ID3D12CommandAllocator> D3DClass::getCommandAllocator()
+ID3D12CommandAllocator* D3DClass::getCommandAllocator()
 {
-    return m_pCommandAllocator;
+    return m_pCommandAllocator.get();
 }
 
 unsigned int D3DClass::getBackBufferIndex()

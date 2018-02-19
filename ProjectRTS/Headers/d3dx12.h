@@ -468,13 +468,13 @@ struct CD3DX12_SHADER_BYTECODE : public D3D12_SHADER_BYTECODE
     explicit CD3DX12_SHADER_BYTECODE(const D3D12_SHADER_BYTECODE &o) :
         D3D12_SHADER_BYTECODE(o)
     {}
-    CD3DX12_SHADER_BYTECODE(
+    explicit CD3DX12_SHADER_BYTECODE(
         ID3DBlob* pShaderBlob )
     {
         pShaderBytecode = pShaderBlob->GetBufferPointer();
         BytecodeLength = pShaderBlob->GetBufferSize();
     }
-    CD3DX12_SHADER_BYTECODE(
+    explicit CD3DX12_SHADER_BYTECODE(
         void* _pShaderBytecode,
         SIZE_T bytecodeLength )
     {
@@ -687,14 +687,14 @@ struct CD3DX12_TEXTURE_COPY_LOCATION : public D3D12_TEXTURE_COPY_LOCATION
     explicit CD3DX12_TEXTURE_COPY_LOCATION(const D3D12_TEXTURE_COPY_LOCATION &o) :
         D3D12_TEXTURE_COPY_LOCATION(o)
     {}
-    CD3DX12_TEXTURE_COPY_LOCATION(ID3D12Resource* pRes) { pResource = pRes; }
-    CD3DX12_TEXTURE_COPY_LOCATION(ID3D12Resource* pRes, D3D12_PLACED_SUBRESOURCE_FOOTPRINT const& Footprint)
+	explicit CD3DX12_TEXTURE_COPY_LOCATION(ID3D12Resource* pRes) { pResource = pRes; }
+	explicit CD3DX12_TEXTURE_COPY_LOCATION(ID3D12Resource* pRes, D3D12_PLACED_SUBRESOURCE_FOOTPRINT const& Footprint)
     {
         pResource = pRes;
         Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
         PlacedFootprint = Footprint;
     }
-    CD3DX12_TEXTURE_COPY_LOCATION(ID3D12Resource* pRes, UINT Sub)
+	explicit CD3DX12_TEXTURE_COPY_LOCATION(ID3D12Resource* pRes, UINT Sub)
     {
         pResource = pRes;
         Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
@@ -1057,7 +1057,7 @@ struct CD3DX12_ROOT_SIGNATURE_DESC : public D3D12_ROOT_SIGNATURE_DESC
     explicit CD3DX12_ROOT_SIGNATURE_DESC(const D3D12_ROOT_SIGNATURE_DESC &o) :
         D3D12_ROOT_SIGNATURE_DESC(o)
     {}
-    CD3DX12_ROOT_SIGNATURE_DESC(
+	explicit CD3DX12_ROOT_SIGNATURE_DESC(
         UINT numParameters,
         _In_reads_opt_(numParameters) const D3D12_ROOT_PARAMETER* _pParameters,
         UINT numStaticSamplers = 0,
@@ -1066,7 +1066,7 @@ struct CD3DX12_ROOT_SIGNATURE_DESC : public D3D12_ROOT_SIGNATURE_DESC
     {
         Init(numParameters, _pParameters, numStaticSamplers, _pStaticSamplers, flags);
     }
-    CD3DX12_ROOT_SIGNATURE_DESC(CD3DX12_DEFAULT)
+	explicit CD3DX12_ROOT_SIGNATURE_DESC(CD3DX12_DEFAULT)
     {
         Init(0, NULL, 0, NULL, D3D12_ROOT_SIGNATURE_FLAG_NONE);
     }
@@ -1104,12 +1104,12 @@ struct CD3DX12_CPU_DESCRIPTOR_HANDLE : public D3D12_CPU_DESCRIPTOR_HANDLE
     explicit CD3DX12_CPU_DESCRIPTOR_HANDLE(const D3D12_CPU_DESCRIPTOR_HANDLE &o) :
         D3D12_CPU_DESCRIPTOR_HANDLE(o)
     {}
-    CD3DX12_CPU_DESCRIPTOR_HANDLE(CD3DX12_DEFAULT) { ptr = 0; }
-    CD3DX12_CPU_DESCRIPTOR_HANDLE(_In_ const D3D12_CPU_DESCRIPTOR_HANDLE &other, INT offsetScaledByIncrementSize)
+	explicit CD3DX12_CPU_DESCRIPTOR_HANDLE(CD3DX12_DEFAULT) { ptr = 0; }
+	explicit CD3DX12_CPU_DESCRIPTOR_HANDLE(_In_ const D3D12_CPU_DESCRIPTOR_HANDLE &other, INT offsetScaledByIncrementSize)
     {
         InitOffsetted(other, offsetScaledByIncrementSize);
     }
-    CD3DX12_CPU_DESCRIPTOR_HANDLE(_In_ const D3D12_CPU_DESCRIPTOR_HANDLE &other, INT offsetInDescriptors, UINT descriptorIncrementSize)
+	explicit CD3DX12_CPU_DESCRIPTOR_HANDLE(_In_ const D3D12_CPU_DESCRIPTOR_HANDLE &other, INT offsetInDescriptors, UINT descriptorIncrementSize)
     {
         InitOffsetted(other, offsetInDescriptors, descriptorIncrementSize);
     }
@@ -1165,12 +1165,12 @@ struct CD3DX12_GPU_DESCRIPTOR_HANDLE : public D3D12_GPU_DESCRIPTOR_HANDLE
     explicit CD3DX12_GPU_DESCRIPTOR_HANDLE(const D3D12_GPU_DESCRIPTOR_HANDLE &o) :
         D3D12_GPU_DESCRIPTOR_HANDLE(o)
     {}
-    CD3DX12_GPU_DESCRIPTOR_HANDLE(CD3DX12_DEFAULT) { ptr = 0; }
-    CD3DX12_GPU_DESCRIPTOR_HANDLE(_In_ const D3D12_GPU_DESCRIPTOR_HANDLE &other, INT offsetScaledByIncrementSize)
+	explicit CD3DX12_GPU_DESCRIPTOR_HANDLE(CD3DX12_DEFAULT) { ptr = 0; }
+	explicit CD3DX12_GPU_DESCRIPTOR_HANDLE(_In_ const D3D12_GPU_DESCRIPTOR_HANDLE &other, INT offsetScaledByIncrementSize)
     {
         InitOffsetted(other, offsetScaledByIncrementSize);
     }
-    CD3DX12_GPU_DESCRIPTOR_HANDLE(_In_ const D3D12_GPU_DESCRIPTOR_HANDLE &other, INT offsetInDescriptors, UINT descriptorIncrementSize)
+	explicit CD3DX12_GPU_DESCRIPTOR_HANDLE(_In_ const D3D12_GPU_DESCRIPTOR_HANDLE &other, INT offsetInDescriptors, UINT descriptorIncrementSize)
     {
         InitOffsetted(other, offsetInDescriptors, descriptorIncrementSize);
     }
